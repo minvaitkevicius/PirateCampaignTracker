@@ -248,6 +248,8 @@ body{
 .edit-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--text3);margin:7px 0 2px;}
 .hp-bar-wrap{background:var(--bg);border-radius:3px;height:6px;margin-top:6px;overflow:hidden;}
 .hp-bar{height:100%;border-radius:3px;transition:width .4s,background .4s;}
+.ship-name-tap{cursor:pointer;border-bottom:1px dashed var(--border2);padding-bottom:1px;transition:border-color .2s;}
+.ship-name-tap:hover{border-bottom-color:var(--gold);}
 
 /* ── SHIP STATS + STORES unified block ── */
 .ship-stats-stores{margin-top:0;}
@@ -472,7 +474,7 @@ body{
   <!-- Ship image + name + edit -->
   <div class="sec" id="ship-sec">
     <div class="sec-title">
-      <span>⛵ <span id="ship-name-disp">Vessel</span></span>
+      <span>⛵ <span id="ship-name-disp" class="ship-name-tap" onclick="enterShipEditIfNot()" title="Tap to edit name">Vessel</span></span>
       <button class="edit-btn" id="ship-edt" onclick="toggleEdit('ship-sec','ship-edt',openShipEdit,null)">✏ Edit</button>
     </div>
     <div class="ship-img-area" onclick="document.getElementById('ship-file').click()">
@@ -599,6 +601,25 @@ body{
     <div class="sec-title"><span>✨ Elemental Motes</span></div>
     <div class="mote-grid" id="mote-grid"></div>
   </div>
+
+  <!-- Ship Upgrades -->
+  <div class="sec">
+    <div class="sec-title">
+      <span>⚙ Upgrades &amp; Modifications</span>
+    </div>
+    <div class="inv-wrap">
+      <table class="inv-tbl" id="upgrades-tbl">
+        <thead><tr>
+          <th style="width:28%">Name</th>
+          <th style="width:35%">Effect</th>
+          <th style="width:29%">Comment</th>
+          <th style="width:8%"></th>
+        </tr></thead>
+        <tbody id="upgrades-body"></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn" onclick="addUpgrade()">＋ ADD UPGRADE</button>
+  </div>
 </div>
 
 <!-- ══ CREW ══ -->
@@ -635,6 +656,7 @@ let S = {
   supplies:{crew:10,grub:10,grog:6,gear:10},
   supplyMax:{crew:20,grub:10,grog:6,gear:10},
   inventory:[],
+  upgrades:[],
   shipImg:null
 };
 
@@ -725,7 +747,7 @@ function loadLocal(){
 // ══════════════════════════════════════════
 //  RENDER ALL
 // ══════════════════════════════════════════
-function renderAll(){ renderCoins();renderInventory();renderShip();renderWeapons();renderMotes();renderCrew();renderSupplies(); }
+function renderAll(){ renderCoins();renderInventory();renderShip();renderWeapons();renderMotes();renderCrew();renderSupplies();renderUpgrades(); }
 
 // ══════════════════════════════════════════
 //  TABS
@@ -885,6 +907,22 @@ function renderWeapons(){
     return WEAPONS.find(x=>x.id===id)?.crewOnly||false;
   }
 
+  // Compact dice+range label e.g. "d8 short" "d12 crew"
+  function slotStatLine(id){
+    if(!id) return '';
+    const w = WEAPONS.find(x=>x.id===id);
+    if(!w || !w.dice) return '';
+    if(w.crewOnly) return w.dice+' crew';
+    const rmap = {Short:'short',Normal:'nrml',Long:'long'};
+    return w.dice+' '+(rmap[w.range]||w.range||'');
+  }
+  function slotStatColor(id){
+    if(!id) return '#3e2e1a';
+    const w = WEAPONS.find(x=>x.id===id);
+    if(w?.crewOnly) return '#e85c1a';
+    return '#b8a078';
+  }
+
   // Color for slot based on weapon
   function slotFill(id){
     if(!id) return '#1a1208';
@@ -946,7 +984,7 @@ function renderWeapons(){
     <!-- connector line -->
     <line x1="${x+slotW}" y1="${y}" x2="${W/2-90}" y2="${y}" stroke="#3e2e1a" stroke-width="1" stroke-dasharray="4,3"/>
     <text x="${x+slotW/2}" y="${y-3}" text-anchor="middle" font-size="9" fill="${id?'#e0b445':'#6a5038'}" font-family="Cinzel,serif">${lbl}</text>
-    <text x="${x+slotW/2}" y="${y+9}" text-anchor="middle" font-size="8" fill="${co?'#e85c1a':id?'#b8a078':'#3e2e1a'}" font-family="Cinzel,serif">${dice}${co?' ☠':''}</text>
+    <text x="${x+slotW/2}" y="${y+9}" text-anchor="middle" font-size="8" fill="${slotStatColor(id)}" font-family="Lora,serif">${slotStatLine(id)}</text>
   </g>`;
   }
 
@@ -964,7 +1002,7 @@ function renderWeapons(){
       fill="${slotFill(id)}" stroke="${slotStroke(id)}" stroke-width="${id?1.5:1}"/>
     <line x1="${x}" y1="${y}" x2="${W/2+90}" y2="${y}" stroke="#3e2e1a" stroke-width="1" stroke-dasharray="4,3"/>
     <text x="${x+slotW/2}" y="${y-3}" text-anchor="middle" font-size="9" fill="${id?'#e0b445':'#6a5038'}" font-family="Cinzel,serif">${lbl}</text>
-    <text x="${x+slotW/2}" y="${y+9}" text-anchor="middle" font-size="8" fill="${co?'#e85c1a':id?'#b8a078':'#3e2e1a'}" font-family="Cinzel,serif">${dice}${co?' ☠':''}</text>
+    <text x="${x+slotW/2}" y="${y+9}" text-anchor="middle" font-size="8" fill="${slotStatColor(id)}" font-family="Lora,serif">${slotStatLine(id)}</text>
   </g>`;
   }
 
@@ -1133,6 +1171,58 @@ function loadFallback(){
     {id:'water',name:'Water',icon:'🌊',color:'#2a8abf',bgColor:'rgba(26,107,154,.06)',spell:'Control Water',tooltip:'Raise, lower, redirect or part water within 300 ft for 10 minutes.'}
   ];
   CREW.forEach(c=>{ if(!(c.id in S.crew)) S.crew[c.id]='none'; });
+}
+
+// ══════════════════════════════════════════
+//  SHIP NAME TAP HELPER
+// ══════════════════════════════════════════
+function enterShipEditIfNot(){
+  const sec = document.getElementById('ship-sec');
+  if(!sec.classList.contains('editing')){
+    toggleEdit('ship-sec','ship-edt',openShipEdit,null);
+    // Focus name field after brief delay for transition
+    setTimeout(()=>{
+      const inp = document.getElementById('e-sname');
+      if(inp){ inp.focus(); inp.select(); }
+    }, 80);
+  }
+}
+
+// ══════════════════════════════════════════
+//  UPGRADES TABLE
+// ══════════════════════════════════════════
+function addUpgrade(){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" placeholder="Upgrade name…" oninput="saveUpgrades()"></td>
+    <td><input type="text" placeholder="What it does…" oninput="saveUpgrades()"></td>
+    <td><input type="text" placeholder="Notes…" oninput="saveUpgrades()"></td>
+    <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
+  document.getElementById('upgrades-body').appendChild(tr);
+}
+function delUpgrade(btn){ btn.closest('tr').remove(); saveUpgrades(); }
+function saveUpgrades(){
+  S.upgrades = [];
+  document.querySelectorAll('#upgrades-body tr').forEach(tr=>{
+    const i = tr.querySelectorAll('input');
+    S.upgrades.push([i[0].value, i[1].value, i[2].value]);
+  });
+  save();
+}
+function renderUpgrades(){
+  const tbody = document.getElementById('upgrades-body');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  const rows = S.upgrades && S.upgrades.length ? S.upgrades : [];
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${esc(r[0])}" placeholder="Upgrade name…" oninput="saveUpgrades()"></td>
+      <td><input type="text" value="${esc(r[1])}" placeholder="What it does…" oninput="saveUpgrades()"></td>
+      <td><input type="text" value="${esc(r[2])}" placeholder="Notes…" oninput="saveUpgrades()"></td>
+      <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
 }
 
 boot();
