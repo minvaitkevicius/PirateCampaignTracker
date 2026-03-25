@@ -2,9 +2,9 @@
   "_instructions": "Fill in your Firebase project details below. See README.md for how to get these values.",
   "firebase": {
     "apiKey":            "AIzaSyBOFUuu8E4_W2jCITAEqxLcB1OfXE965ig",
-    "authDomain":        "YOUR_PROJECT.firebaseapp.com",
+    "authDomain":        "piratecampaigntracker.firebaseapp.com",
     "projectId":         "piratecampaigntracker",
-    "storageBucket":     "YOUR_PROJECT.appspot.com",
+    "storageBucket":     "piratecampaigntracker.firebasestorage.app",
     "messagingSenderId": "731448566743",
     "appId":             "1:731448566743:web:99eb5eef35e8c84d4c2192"
   },
