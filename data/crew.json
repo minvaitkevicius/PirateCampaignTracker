@@ -1,0 +1,66 @@
+[
+  {
+    "id": "cook",
+    "name": "Cook",
+    "icon": "🍳",
+    "ability": "Reduces daily grub consumption by 1 per level rank (min 1 consumed)",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "quartermaster",
+    "name": "Quartermaster",
+    "icon": "📋",
+    "ability": "Recovers spent grub and grog equal to level rank per day",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "captain",
+    "name": "Captain",
+    "icon": "⚓",
+    "ability": "Grants morale boost — crew perform better under pressure. Effect scales with level.",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "helmsperson",
+    "name": "Helmsperson",
+    "icon": "🧭",
+    "ability": "Provides extra movement. Each level rank adds +5 ft to ship speed during maneuvers.",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "boatswain",
+    "name": "Boatswain",
+    "icon": "🪣",
+    "ability": "Extinguishes fires — can automatically put out fires equal to level rank per encounter.",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "mastergunner",
+    "name": "Master Gunner",
+    "icon": "💣",
+    "ability": "Reroll 1 die per level rank on cannon attacks per round.",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "shipwright",
+    "name": "Shipwright",
+    "icon": "🔨",
+    "ability": "Repairs 1 HP per level rank per day while at sea.",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "navigator",
+    "name": "Navigator",
+    "icon": "🗺️",
+    "ability": "Performs navigation checks. Higher levels reduce chance of getting lost and improve travel time.",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  }
+]

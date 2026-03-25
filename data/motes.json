@@ -1,0 +1,38 @@
+[
+  {
+    "id": "air",
+    "name": "Air",
+    "icon": "💨",
+    "color": "#7ecbef",
+    "bgColor": "rgba(126,203,239,0.06)",
+    "spell": "Gust of Wind",
+    "tooltip": "Creates a powerful 60 ft line of wind for 10 minutes, pushing creatures and affecting ranged attacks."
+  },
+  {
+    "id": "fire",
+    "name": "Fire",
+    "icon": "🔥",
+    "color": "#e85c1a",
+    "bgColor": "rgba(232,92,26,0.06)",
+    "spell": "Burning Hands",
+    "tooltip": "A cone of fire blazes from the hands for 10 minutes, dealing 3d6 fire damage to all creatures in range."
+  },
+  {
+    "id": "earth",
+    "name": "Earth",
+    "icon": "🪨",
+    "color": "#9b7d20",
+    "bgColor": "rgba(139,105,20,0.06)",
+    "spell": "Mold Earth",
+    "tooltip": "Shape and move earth, stone, and sand within 30 ft for 10 minutes, creating difficult terrain or crude structures."
+  },
+  {
+    "id": "water",
+    "name": "Water",
+    "icon": "🌊",
+    "color": "#2a8abf",
+    "bgColor": "rgba(26,107,154,0.06)",
+    "spell": "Control Water",
+    "tooltip": "Raise, lower, redirect, or part bodies of water within 300 ft for 10 minutes, creating waves or whirlpools."
+  }
+]

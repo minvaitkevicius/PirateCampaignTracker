@@ -1,0 +1,66 @@
+[
+  {
+    "id": "empty",
+    "name": "— Empty —",
+    "dice": "",
+    "range": "",
+    "crewOnly": false,
+    "note": ""
+  },
+  {
+    "id": "carronade",
+    "name": "Carronade",
+    "dice": "d12",
+    "range": "Short",
+    "crewOnly": false,
+    "note": "d12 · Short range"
+  },
+  {
+    "id": "culverin",
+    "name": "Culverin",
+    "dice": "d8",
+    "range": "Normal",
+    "crewOnly": false,
+    "note": "d8 · Normal range"
+  },
+  {
+    "id": "falconet",
+    "name": "Falconet",
+    "dice": "d12",
+    "range": "Short",
+    "crewOnly": true,
+    "note": "d12 · Short · Crew damage only"
+  },
+  {
+    "id": "longgun",
+    "name": "Long Gun",
+    "dice": "d10",
+    "range": "Normal",
+    "crewOnly": false,
+    "note": "d10 · Normal range"
+  },
+  {
+    "id": "longnine",
+    "name": "Long Nine",
+    "dice": "d10",
+    "range": "Long",
+    "crewOnly": false,
+    "note": "d10 · Long range"
+  },
+  {
+    "id": "saker",
+    "name": "Saker",
+    "dice": "d6",
+    "range": "Normal",
+    "crewOnly": false,
+    "note": "d6 · Normal range"
+  },
+  {
+    "id": "swivel",
+    "name": "Swivel Gun",
+    "dice": "d8",
+    "range": "Short",
+    "crewOnly": true,
+    "note": "d8 · Short · Crew damage only"
+  }
+]
