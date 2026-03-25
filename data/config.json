@@ -1,12 +1,12 @@
 {
   "_instructions": "Fill in your Firebase project details below. See README.md for how to get these values.",
   "firebase": {
-    "apiKey":            "YOUR_API_KEY",
+    "apiKey":            "AIzaSyBOFUuu8E4_W2jCITAEqxLcB1OfXE965ig",
     "authDomain":        "YOUR_PROJECT.firebaseapp.com",
-    "projectId":         "YOUR_PROJECT_ID",
+    "projectId":         "piratecampaigntracker",
     "storageBucket":     "YOUR_PROJECT.appspot.com",
-    "messagingSenderId": "YOUR_SENDER_ID",
-    "appId":             "YOUR_APP_ID"
+    "messagingSenderId": "731448566743",
+    "appId":             "1:731448566743:web:99eb5eef35e8c84d4c2192"
   },
   "defaultPartyCode": "pirates",
   "_note": "defaultPartyCode is used if the player doesn't enter one. You can share your URL with ?party=CODE to auto-join."
