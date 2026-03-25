@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>⚓ Party Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+<!-- Firebase v10 modular SDK -->
+<script type="module">
+import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+window._fbReady    = false;
+window._db         = null;
+window._docRef     = null;
+window._ignoreNext = false;
+
+window._setupFirebase = async function(cfg, partyCode){
+  try {
+    const app = initializeApp(cfg);
+    const db  = getFirestore(app);
+    window._db     = db;
+    window._docRef = doc(db, 'parties', partyCode);
+    window._fbReady = true;
+
+    onSnapshot(window._docRef, snap => {
+      if(!snap.exists()) return;
+      if(window._ignoreNext){ window._ignoreNext=false; return; }
+      window._mergeRemote(snap.data());
+    });
+
+    setSyncStatus('🟢 Synced','green2');
+  } catch(e) {
+    console.warn('Firebase error:', e);
+    setSyncStatus('🔴 Offline only','red2');
+  }
+};
+
+window._pushToFirebase = async function(state){
+  if(!window._fbReady || !window._docRef) return;
+  try {
+    window._ignoreNext = true;
+    await setDoc(window._docRef, state, {merge:true});
+  } catch(e) {
+    setSyncStatus('⚠️ Sync error','gold2');
+  }
+};
+
+function setSyncStatus(msg, v){ window._setSyncStatus && window._setSyncStatus(msg,v); }
+</script>
+
+<style>
+:root {
+  --bg:      #0c0906;
+  --bg2:     #13100a;
+  --bg3:     #1b1410;
+  --panel:   #181108;
+  --panel2:  #201608;
+  --border:  #3e2e1a;
+  --border2: #5c4228;
+  --gold:    #c49a1a;
+  --gold2:   #e0b445;
+  --gold3:   #f2d070;
+  --red:     #b83228;
+  --red2:    #e04030;
+  --green:   #28a058;
+  --green2:  #32c870;
+  --blue2:   #4ab0d8;
+  --text:    #eedcb4;
+  --text2:   #b8a078;
+  --text3:   #6a5038;
+  --radius:  5px;
+  --shadow:  0 4px 24px rgba(0,0,0,0.7);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Lora',serif;font-size:14px;
+  display:flex;flex-direction:column;
+}
+
+/* ── LOADING SPLASH ── */
+#splash{
+  position:fixed;inset:0;background:var(--bg);z-index:999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;transition:opacity .4s;
+}
+#splash h2{
+  font-family:'Cinzel Decorative',serif;font-size:22px;
+  color:var(--gold2);letter-spacing:2px;
+  text-shadow:0 0 20px rgba(200,148,26,.4);
+}
+#splash-msg{color:var(--text3);font-style:italic;font-size:13px;}
+.splash-anchor{
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;
+  color:var(--text3);margin-top:4px;
+}
+.spinner{
+  width:32px;height:32px;border:3px solid var(--border2);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── HEADER ── */
+.hdr{
+  background:linear-gradient(180deg,#080503 0%,var(--bg2) 100%);
+  border-bottom:2px solid var(--border);padding:10px 14px 0;
+  flex-shrink:0;box-shadow:0 2px 16px rgba(0,0,0,.6);z-index:50;
+}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.hdr h1{
+  font-family:'Cinzel Decorative',serif;font-size:15px;
+  color:var(--gold2);letter-spacing:2px;flex:1;text-align:center;
+  text-shadow:0 0 18px rgba(201,148,26,.45);
+}
+#sync-badge{font-family:'Lora',serif;font-size:10px;color:var(--text3);white-space:nowrap;min-width:70px;text-align:right;}
+.party-tag{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--text3);min-width:70px;}
+.tabs{display:flex;gap:2px;}
+.tab-btn{
+  flex:1;border:none;background:transparent;
+  border-top:2px solid transparent;color:var(--text3);
+  font-family:'Cinzel',serif;font-size:9px;font-weight:700;
+  letter-spacing:.5px;padding:7px 2px 8px;cursor:pointer;transition:all .2s;text-transform:uppercase;
+}
+.tab-btn.active{
+  color:var(--gold2);border-top-color:var(--gold);
+  background:linear-gradient(180deg,rgba(196,154,26,.1) 0%,transparent 100%);
+}
+
+/* ── SCROLL / CONTENT ── */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.content{padding:14px;max-width:480px;margin:0 auto;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ── SECTION ── */
+.sec{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius);padding:13px;margin-bottom:14px;
+  box-shadow:inset 0 1px 0 rgba(200,160,40,.08),var(--shadow);
+}
+.sec-title{
+  font-family:'Cinzel',serif;font-size:11px;font-weight:700;
+  letter-spacing:2px;color:var(--gold);text-transform:uppercase;
+  margin-bottom:11px;padding-bottom:6px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+
+/* ── EDIT BTN ── */
+.edit-btn{
+  background:transparent;border:1px solid var(--border2);
+  border-radius:3px;color:var(--text3);font-family:'Cinzel',serif;
+  font-size:9px;letter-spacing:1px;padding:3px 8px;cursor:pointer;
+  transition:all .2s;text-transform:uppercase;white-space:nowrap;
+}
+.edit-btn.on{border-color:var(--gold);color:var(--gold2);}
+.edit-mode{display:none;}
+.editing .edit-mode{display:block;}
+.editing .view-mode{display:none;}
+
+/* ── COINS ── */
+.coin-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.coin-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:9px 10px;}
+.coin-lbl{
+  font-family:'Cinzel',serif;font-size:9px;font-weight:700;
+  letter-spacing:1px;margin-bottom:3px;
+  display:flex;align-items:center;gap:5px;
+}
+.cicon{width:15px;height:15px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;flex-shrink:0;}
+.pp .cicon{background:#9898cc;color:#fff;} .pp .coin-lbl{color:#a0a0d0;}
+.gp .cicon{background:var(--gold);color:#000;} .gp .coin-lbl{color:var(--gold);}
+.sp .cicon{background:#aaa;color:#333;} .sp .coin-lbl{color:#b0b0b0;}
+.cp .cicon{background:#b86040;color:#fff;} .cp .coin-lbl{color:#c08060;}
+.coin-val{font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:var(--text);line-height:1;margin:3px 0 6px;}
+.coin-ctrl{display:flex;gap:4px;align-items:center;}
+.coin-inp{
+  background:var(--bg);border:1px solid var(--border2);border-radius:3px;
+  color:var(--text);font-family:'Cinzel',serif;font-size:12px;
+  padding:4px;width:52px;text-align:center;
+}
+.coin-inp:focus{outline:1px solid var(--gold);}
+.btn-pm{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:3px;
+  color:var(--text);font-size:18px;width:32px;height:32px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:transform .12s;user-select:none;
+}
+.btn-pm.add{border-color:var(--green);color:var(--green2);}
+.btn-pm.sub{border-color:var(--red);color:var(--red2);}
+.btn-pm:active{transform:scale(.86);}
+.gold-total{
+  background:linear-gradient(135deg,var(--bg3),var(--panel2));
+  border:1px solid var(--gold);border-radius:var(--radius);
+  padding:9px 13px;margin-top:9px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.gt-lbl{font-family:'Cinzel',serif;font-size:10px;color:var(--gold);letter-spacing:1px;}
+.gt-val{font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--gold3);}
+.conv-note{font-size:11px;color:var(--text3);text-align:center;margin-top:5px;font-style:italic;}
+
+/* ── INVENTORY ── */
+.inv-wrap{overflow-x:auto;}
+.inv-tbl{width:100%;border-collapse:collapse;min-width:260px;}
+.inv-tbl th{
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;
+  color:var(--gold);text-align:left;padding:5px 7px;
+  border-bottom:1px solid var(--border);text-transform:uppercase;
+}
+.inv-tbl td{padding:5px 7px;border-bottom:1px solid rgba(60,40,20,.4);vertical-align:top;}
+.inv-tbl tr:last-child td{border-bottom:none;}
+.inv-tbl input{
+  background:transparent;border:none;color:var(--text);
+  font-family:'Lora',serif;font-size:13px;width:100%;padding:1px 0;
+}
+.inv-tbl input:focus{outline:none;border-bottom:1px solid var(--gold);}
+.del-btn{background:transparent;border:none;color:var(--red);font-size:13px;cursor:pointer;opacity:.4;padding:0 3px;}
+.del-btn:hover{opacity:1;}
+.add-row-btn{
+  background:transparent;border:1px dashed var(--border2);border-radius:3px;
+  color:var(--text3);font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;
+  padding:8px;width:100%;cursor:pointer;margin-top:7px;transition:all .2s;
+}
+.add-row-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── SHIP ── */
+.ship-img-area{
+  background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--radius);
+  height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;overflow:hidden;margin-bottom:12px;
+}
+.ship-img-area img{width:100%;height:100%;object-fit:cover;}
+.ship-ph{color:var(--text3);font-family:'Lora',serif;font-size:12px;text-align:center;}
+.ship-ph .big{font-size:36px;display:block;margin-bottom:5px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:12px;}
+.sbox{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 6px;text-align:center;}
+.sbox-lbl{font-family:'Cinzel',serif;font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.sbox-val{font-family:'Cinzel',serif;font-size:20px;font-weight:700;color:var(--text);}
+.sbox.hp .sbox-val{color:var(--red2);} .sbox.ac .sbox-val{color:var(--blue2);} .sbox.spd .sbox-val{color:var(--green2);font-size:16px;}
+.sbox-ctrl{display:flex;gap:5px;align-items:center;justify-content:center;margin-top:5px;}
+.edit-inp{
+  background:var(--bg);border:1px solid var(--border2);border-radius:3px;
+  color:var(--text);font-family:'Lora',serif;font-size:13px;
+  padding:5px;width:100%;text-align:center;margin-top:4px;
+}
+.edit-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--text3);margin:7px 0 2px;}
+.hp-bar-wrap{background:var(--bg);border-radius:3px;height:6px;margin-top:6px;overflow:hidden;}
+.hp-bar{height:100%;border-radius:3px;transition:width .4s,background .4s;}
+
+/* ── SHIP STATS + STORES unified block ── */
+.ship-stats-stores{margin-top:0;}
+.ship-stats-stores .stat-grid{margin-bottom:10px;}
+
+/* ── WEAPONS ── */
+.side-hdr{font-family:'Cinzel',serif;font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px;}
+.weapon-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+.wslot{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:6px 5px;}
+.wslot-num{font-family:'Cinzel',serif;font-size:8px;color:var(--text3);letter-spacing:1px;margin-bottom:3px;}
+.wslot select{
+  background:var(--bg);border:none;color:var(--text);
+  font-family:'Lora',serif;font-size:11px;width:100%;cursor:pointer;
+  appearance:none;padding:2px 0;
+}
+.wslot select:focus{outline:1px solid var(--gold);}
+.wslot-info{font-size:9px;color:var(--text3);margin-top:3px;font-style:italic;line-height:1.3;}
+
+/* ── MOTES ── */
+.mote-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.mote-box{border:1px solid;border-radius:var(--radius);padding:9px 10px;}
+.mote-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:5px;}
+.mote-ctrl{display:flex;align-items:center;gap:8px;}
+.mote-count{font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:var(--text);flex:1;text-align:center;}
+.has-tip{position:relative;}
+.tip-icon{font-size:11px;color:var(--text3);cursor:help;}
+.tip-box{
+  display:none;position:absolute;bottom:125%;left:50%;transform:translateX(-50%);
+  background:var(--bg2);border:1px solid var(--gold);border-radius:4px;
+  padding:8px 10px;font-family:'Lora',serif;font-style:italic;
+  font-size:12px;color:var(--text2);width:185px;z-index:999;
+  pointer-events:none;text-align:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.6);line-height:1.45;white-space:normal;
+}
+.has-tip:hover .tip-box{display:block;}
+
+/* ── CREW ── */
+.crew-list{display:flex;flex-direction:column;gap:7px;}
+.crew-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:9px 11px;display:flex;align-items:center;gap:8px;}
+.crew-icon{font-size:16px;flex-shrink:0;}
+.crew-info{flex:1;}
+.crew-role{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.5px;}
+.crew-ability{font-size:12px;color:var(--text3);font-style:italic;margin-top:2px;line-height:1.35;}
+.crew-sel{
+  background:var(--bg);border:1px solid var(--border2);border-radius:3px;
+  color:var(--gold2);font-family:'Lora',serif;font-size:12px;
+  padding:4px 8px;cursor:pointer;flex-shrink:0;
+}
+
+/* ── SUPPLIES ── */
+/* ── STORES (inline, always editable) ── */
+.stores-layout{display:flex;flex-direction:column;gap:6px;}
+.store-row{
+  display:grid;
+  grid-template-columns:80px 1fr auto;
+  grid-template-rows:auto auto;
+  align-items:center;gap:4px 8px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);padding:8px 10px;
+}
+.store-icon-lbl{
+  font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+  color:var(--text2);letter-spacing:.5px;
+  grid-column:1;grid-row:1;
+}
+.store-ctrl{
+  display:flex;align-items:center;gap:6px;
+  grid-column:2;grid-row:1;
+}
+.store-val{
+  font-family:'Cinzel',serif;font-size:22px;font-weight:700;
+  color:var(--text);min-width:32px;text-align:center;
+}
+.store-max-wrap{
+  display:flex;align-items:center;gap:2px;
+  grid-column:3;grid-row:1;
+}
+.store-slash{font-size:14px;color:var(--text3);font-family:'Cinzel',serif;}
+.store-max-inp{
+  background:var(--bg);border:1px solid var(--border2);border-radius:3px;
+  color:var(--gold2);font-family:'Cinzel',serif;font-size:13px;
+  padding:3px 5px;width:52px;text-align:center;
+}
+.store-max-inp:focus{outline:1px solid var(--gold);}
+.store-bar-wrap{
+  background:var(--bg);border-radius:3px;height:4px;
+  grid-column:1/-1;grid-row:2;overflow:hidden;
+}
+.store-bar{height:100%;border-radius:3px;transition:width .3s,background .3s;}
+.grub-calc{
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:10px 13px;margin-top:8px;
+  font-size:13px;color:var(--text2);line-height:1.75;
+}
+.grub-calc strong{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.5px;color:var(--gold2);display:block;margin-bottom:3px;}
+
+/* ── SHIP DIAGRAM ── */
+.ship-diagram{width:100%;max-width:440px;display:block;margin:0 auto;}
+.weapon-popup{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--bg2);border-top:2px solid var(--border2);
+  border-radius:12px 12px 0 0;padding:16px;
+  z-index:200;transform:translateY(100%);transition:transform .25s;
+}
+.weapon-popup.open{transform:translateY(0);}
+.popup-title{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.popup-sel{
+  background:var(--bg);border:1px solid var(--border2);border-radius:4px;
+  color:var(--text);font-family:'Lora',serif;font-size:14px;
+  padding:8px 10px;width:100%;margin-bottom:8px;cursor:pointer;
+}
+.popup-info{font-size:12px;color:var(--text3);font-style:italic;margin-bottom:12px;}
+.popup-close{
+  background:transparent;border:1px solid var(--border2);border-radius:4px;
+  color:var(--text2);font-family:'Cinzel',serif;font-size:10px;
+  letter-spacing:1px;padding:8px;width:100%;cursor:pointer;text-transform:uppercase;
+}
+.popup-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;
+}
+.popup-overlay.open{display:block;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING SPLASH ═══ -->
+<div id="splash">
+  <h2>⚓ Party Tracker</h2>
+  <div class="spinner"></div>
+  <div id="splash-msg">Loading…</div>
+  <div class="splash-anchor" id="splash-party"></div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app" style="display:none;height:100%;flex-direction:column">
+
+<div class="hdr">
+  <div class="hdr-row">
+    <div class="party-tag" id="party-tag"></div>
+    <h1>⚓ Party Tracker</h1>
+    <div id="sync-badge">⏳</div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('gold',this)">💰 Gold</button>
+    <button class="tab-btn" onclick="showTab('ship',this)">⛵ Ship</button>
+    <button class="tab-btn" onclick="showTab('crew',this)">👥 Crew</button>
+  </div>
+</div>
+
+<div class="scroll"><div class="content">
+
+<!-- ══ GOLD ══ -->
+<div class="tab-panel active" id="tab-gold">
+  <div class="sec">
+    <div class="sec-title"><span>⚖ Coin Purse</span></div>
+    <div class="coin-grid">
+      <div class="coin-row pp">
+        <div class="coin-lbl"><span class="cicon">P</span>Platinum</div>
+        <div class="coin-val" id="v-pp">0</div>
+        <div class="coin-ctrl">
+          <button class="btn-pm sub" onclick="adjCoin('pp',-1)">−</button>
+          <input class="coin-inp" id="i-pp" type="number" min="1" value="1">
+          <button class="btn-pm add" onclick="adjCoin('pp',1)">+</button>
+        </div>
+      </div>
+      <div class="coin-row gp">
+        <div class="coin-lbl"><span class="cicon">G</span>Gold</div>
+        <div class="coin-val" id="v-gp">0</div>
+        <div class="coin-ctrl">
+          <button class="btn-pm sub" onclick="adjCoin('gp',-1)">−</button>
+          <input class="coin-inp" id="i-gp" type="number" min="1" value="1">
+          <button class="btn-pm add" onclick="adjCoin('gp',1)">+</button>
+        </div>
+      </div>
+      <div class="coin-row sp">
+        <div class="coin-lbl"><span class="cicon">S</span>Silver</div>
+        <div class="coin-val" id="v-sp">0</div>
+        <div class="coin-ctrl">
+          <button class="btn-pm sub" onclick="adjCoin('sp',-1)">−</button>
+          <input class="coin-inp" id="i-sp" type="number" min="1" value="1">
+          <button class="btn-pm add" onclick="adjCoin('sp',1)">+</button>
+        </div>
+      </div>
+      <div class="coin-row cp">
+        <div class="coin-lbl"><span class="cicon">C</span>Copper</div>
+        <div class="coin-val" id="v-cp">0</div>
+        <div class="coin-ctrl">
+          <button class="btn-pm sub" onclick="adjCoin('cp',-1)">−</button>
+          <input class="coin-inp" id="i-cp" type="number" min="1" value="1">
+          <button class="btn-pm add" onclick="adjCoin('cp',1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="gold-total">
+      <span class="gt-lbl">⚖ TOTAL VALUE</span>
+      <span class="gt-val" id="total-gp">0.00 gp</span>
+    </div>
+    <p class="conv-note">1 pp = 10 gp · 1 gp = 10 sp · 1 sp = 10 cp</p>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span>📜 Inventory</span></div>
+    <div class="inv-wrap">
+      <table class="inv-tbl">
+        <thead><tr>
+          <th style="width:27%">Name</th><th style="width:35%">Description</th>
+          <th style="width:30%">Comment</th><th style="width:8%"></th>
+        </tr></thead>
+        <tbody id="inv-body"></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn" onclick="addRow()">＋ ADD ITEM</button>
+  </div>
+</div>
+
+<!-- ══ SHIP ══ -->
+<div class="tab-panel" id="tab-ship">
+
+  <!-- Ship image + name + edit -->
+  <div class="sec" id="ship-sec">
+    <div class="sec-title">
+      <span>⛵ <span id="ship-name-disp">Vessel</span></span>
+      <button class="edit-btn" id="ship-edt" onclick="toggleEdit('ship-sec','ship-edt',openShipEdit,null)">✏ Edit</button>
+    </div>
+    <div class="ship-img-area" onclick="document.getElementById('ship-file').click()">
+      <div class="ship-ph" id="ship-ph"><span class="big">⛵</span>Tap to add ship image</div>
+      <img id="ship-img" style="display:none" alt="Ship">
+    </div>
+    <input type="file" id="ship-file" accept="image/*" style="display:none" onchange="loadShipImg(this)">
+
+    <!-- HP / AC / Speed / Stores — all in one panel -->
+    <div class="ship-stats-stores">
+
+      <!-- stat boxes row -->
+      <div class="stat-grid">
+        <div class="sbox hp">
+          <div class="sbox-lbl">Hull HP</div>
+          <div class="sbox-val view-mode" id="ship-hp">100</div>
+          <div class="hp-bar-wrap view-mode"><div class="hp-bar" id="hp-bar"></div></div>
+          <div class="sbox-ctrl view-mode">
+            <button class="btn-pm sub" onclick="adjHP(-1)">−</button>
+            <button class="btn-pm add" onclick="adjHP(1)">+</button>
+          </div>
+          <div class="edit-mode">
+            <div class="edit-lbl">Current HP</div>
+            <input class="edit-inp" id="e-hpc" type="number" min="0" oninput="applyShipEdit()">
+            <div class="edit-lbl">Max HP</div>
+            <input class="edit-inp" id="e-hpm" type="number" min="1" oninput="applyShipEdit()">
+          </div>
+        </div>
+        <div class="sbox ac">
+          <div class="sbox-lbl">AC</div>
+          <div class="sbox-val view-mode" id="ship-ac">15</div>
+          <div class="sbox-ctrl view-mode">
+            <button class="btn-pm sub" onclick="adjStat('ac',-1)">−</button>
+            <button class="btn-pm add" onclick="adjStat('ac',1)">+</button>
+          </div>
+          <div class="edit-mode">
+            <div class="edit-lbl">Set AC</div>
+            <input class="edit-inp" id="e-ac" type="number" min="0" oninput="applyShipEdit()">
+          </div>
+        </div>
+        <div class="sbox spd">
+          <div class="sbox-lbl">Speed</div>
+          <div class="sbox-val view-mode" id="ship-spd">5 kn</div>
+          <div class="sbox-ctrl view-mode">
+            <button class="btn-pm sub" onclick="adjStat('speed',-1)">−</button>
+            <button class="btn-pm add" onclick="adjStat('speed',1)">+</button>
+          </div>
+          <div class="edit-mode">
+            <div class="edit-lbl">Speed (knots)</div>
+            <input class="edit-inp" id="e-spd" type="number" min="0" oninput="applyShipEdit()">
+          </div>
+        </div>
+      </div>
+
+      <!-- stores row — always editable inline, no edit button needed -->
+      <div class="stores-layout">
+        <div class="store-row">
+          <div class="store-icon-lbl">⚓ Crew</div>
+          <div class="store-ctrl">
+            <button class="btn-pm sub" onclick="adjSup('crew',-1)">−</button>
+            <div class="store-val" id="s-crew">0</div>
+            <button class="btn-pm add" onclick="adjSup('crew',1)">+</button>
+          </div>
+          <div class="store-max-wrap">
+            <span class="store-slash">/ </span><input class="store-max-inp" id="e-crew-max" type="number" min="0" placeholder="max" oninput="applySupEdit()" title="Set max crew">
+          </div>
+        </div>
+        <div class="store-row">
+          <div class="store-icon-lbl">🍖 Grub</div>
+          <div class="store-ctrl">
+            <button class="btn-pm sub" onclick="adjSup('grub',-1)">−</button>
+            <div class="store-val" id="s-grub">0</div>
+            <button class="btn-pm add" onclick="adjSup('grub',1)">+</button>
+          </div>
+          <div class="store-max-wrap">
+            <span class="store-slash">/ </span><input class="store-max-inp" id="e-grub-max" type="number" min="0" placeholder="max" oninput="applySupEdit()" title="Set max grub">
+          </div>
+          <div class="store-bar-wrap"><div class="store-bar" id="sb-grub"></div></div>
+        </div>
+        <div class="store-row">
+          <div class="store-icon-lbl">🍺 Grog</div>
+          <div class="store-ctrl">
+            <button class="btn-pm sub" onclick="adjSup('grog',-1)">−</button>
+            <div class="store-val" id="s-grog">0</div>
+            <button class="btn-pm add" onclick="adjSup('grog',1)">+</button>
+          </div>
+          <div class="store-max-wrap">
+            <span class="store-slash">/ </span><input class="store-max-inp" id="e-grog-max" type="number" min="0" placeholder="max" oninput="applySupEdit()" title="Set max grog">
+          </div>
+          <div class="store-bar-wrap"><div class="store-bar" id="sb-grog"></div></div>
+        </div>
+        <div class="store-row">
+          <div class="store-icon-lbl">🔧 Gear</div>
+          <div class="store-ctrl">
+            <button class="btn-pm sub" onclick="adjSup('gear',-1)">−</button>
+            <div class="store-val" id="s-gear">0</div>
+            <button class="btn-pm add" onclick="adjSup('gear',1)">+</button>
+          </div>
+          <div class="store-max-wrap">
+            <span class="store-slash">/ </span><input class="store-max-inp" id="e-gear-max" type="number" min="0" placeholder="max" oninput="applySupEdit()" title="Set max gear">
+          </div>
+          <div class="store-bar-wrap"><div class="store-bar" id="sb-gear"></div></div>
+        </div>
+      </div>
+      <div class="grub-calc" id="grub-calc"></div>
+
+    </div><!-- /ship-stats-stores -->
+
+    <!-- ship name edit -->
+    <div class="edit-mode" style="margin-top:8px">
+      <div class="edit-lbl">Ship Name</div>
+      <input class="edit-inp" id="e-sname" type="text" placeholder="Enter ship name…" oninput="applyShipEdit()">
+    </div>
+  </div>
+
+  <!-- Cannons — ship diagram with port/starboard -->
+  <div class="sec">
+    <div class="sec-title"><span>🔫 Cannons</span></div>
+    <div id="ship-diagram-wrap"></div>
+  </div>
+
+  <!-- Motes -->
+  <div class="sec">
+    <div class="sec-title"><span>✨ Elemental Motes</span></div>
+    <div class="mote-grid" id="mote-grid"></div>
+  </div>
+</div>
+
+<!-- ══ CREW ══ -->
+<div class="tab-panel" id="tab-crew">
+  <div class="sec">
+    <div class="sec-title"><span>👥 Officers & Crew</span></div>
+    <div class="crew-list" id="crew-list"></div>
+  </div>
+</div>
+
+</div></div><!-- /content /scroll -->
+
+<!-- weapon popup -->
+<div class="popup-overlay" id="wpop-overlay" onclick="closeWeaponPopup()"></div>
+<div class="weapon-popup" id="wpop">
+  <div class="popup-title" id="wpop-title">Select Weapon</div>
+  <select class="popup-sel" id="wpop-sel" onchange="onPopupWeaponChange()"></select>
+  <div class="popup-info" id="wpop-info">—</div>
+  <button class="popup-close" onclick="closeWeaponPopup()">✓ Done</button>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let S = {
+  coins:{pp:0,gp:0,sp:0,cp:0},
+  ship:{name:'The Unnamed Vessel',hpCur:100,hpMax:100,ac:15,speed:5},
+  weapons:{starboard:['','','','','',''],port:['','','','','','']},
+  motes:{air:0,fire:0,earth:0,water:0},
+  crew:{},
+  supplies:{crew:10,grub:10,grog:6,gear:10},
+  supplyMax:{crew:20,grub:10,grog:6,gear:10},
+  inventory:[],
+  shipImg:null
+};
+
+let WEAPONS=[], CREW=[], MOTES=[], CONFIG={};
+let PARTY='';
+
+// ══════════════════════════════════════════
+//  BOOT — auto-join from URL ?party=code
+// ══════════════════════════════════════════
+async function boot(){
+  // 1. Load config
+  try{ CONFIG = await fetch('data/config.json').then(r=>r.json()); }catch(e){}
+
+  // 2. Determine party code: URL param > config default > 'PIRATES'
+  const urlCode = new URLSearchParams(location.search).get('party');
+  const def     = (CONFIG.defaultPartyCode||'pirates').toUpperCase();
+  PARTY = (urlCode||def).toUpperCase().replace(/\s+/g,'') || 'PIRATES';
+
+  // Update splash
+  document.getElementById('splash-party').textContent = '⚑ ' + PARTY;
+  document.getElementById('splash-msg').textContent   = 'Joining session…';
+
+  // 3. Load data files
+  try{
+    [WEAPONS,CREW,MOTES] = await Promise.all([
+      fetch('data/weapons.json').then(r=>r.json()),
+      fetch('data/crew.json').then(r=>r.json()),
+      fetch('data/motes.json').then(r=>r.json())
+    ]);
+  }catch(e){ loadFallback(); }
+
+  CREW.forEach(c=>{ if(!(c.id in S.crew)) S.crew[c.id]='none'; });
+
+  // 4. Expose callbacks for Firebase module
+  window._mergeRemote = remote => { S=deepMerge(S,remote); renderAll(); };
+  window._setSyncStatus = (msg,v) => {
+    const el=document.getElementById('sync-badge');
+    if(el){ el.textContent=msg; el.style.color=`var(--${v})`; }
+  };
+
+  // 5. Load local state first so UI is instant
+  loadLocal();
+
+  // 6. Show app, hide splash
+  const app = document.getElementById('app');
+  app.style.display='flex';
+  document.getElementById('party-tag').textContent='⚑ '+PARTY;
+  const splash=document.getElementById('splash');
+  splash.style.opacity='0';
+  setTimeout(()=>splash.style.display='none', 400);
+
+  renderAll();
+
+  // 7. Connect Firebase (or fall back to local-only)
+  const fb = CONFIG.firebase;
+  if(fb && fb.apiKey && fb.apiKey!=='YOUR_API_KEY'){
+    window._setupFirebase(fb, PARTY);
+  } else {
+    document.getElementById('sync-badge').textContent='💾 Local only';
+    document.getElementById('sync-badge').style.color='var(--text3)';
+  }
+}
+
+// ══════════════════════════════════════════
+//  PERSIST
+// ══════════════════════════════════════════
+function deepMerge(t,s){
+  const o=Object.assign({},t);
+  for(const k in s){
+    if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])) o[k]=deepMerge(t[k]||{},s[k]);
+    else o[k]=s[k];
+  }
+  return o;
+}
+let _st=null;
+function save(){
+  try{ localStorage.setItem('dnd3-'+PARTY,JSON.stringify(S)); }catch(e){}
+  clearTimeout(_st);
+  _st=setTimeout(()=>{ if(window._pushToFirebase) window._pushToFirebase(S); },700);
+}
+function loadLocal(){
+  try{
+    const d=localStorage.getItem('dnd3-'+PARTY);
+    if(d) S=deepMerge(S,JSON.parse(d));
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════
+//  RENDER ALL
+// ══════════════════════════════════════════
+function renderAll(){ renderCoins();renderInventory();renderShip();renderWeapons();renderMotes();renderCrew();renderSupplies(); }
+
+// ══════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════
+function showTab(n,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+n).classList.add('active');
+  btn.classList.add('active');
+  if(n==='supplies') renderGrubCalc();
+}
+
+// ══════════════════════════════════════════
+//  EDIT TOGGLE
+// ══════════════════════════════════════════
+function toggleEdit(secId,btnId,openFn,_){
+  const sec=document.getElementById(secId);
+  const btn=document.getElementById(btnId);
+  const on=sec.classList.toggle('editing');
+  btn.textContent=on?'✓ Done':'✏ Edit';
+  btn.classList.toggle('on',on);
+  if(on && openFn) openFn();
+  else renderAll();
+}
+function openShipEdit(){
+  document.getElementById('e-hpc').value=S.ship.hpCur;
+  document.getElementById('e-hpm').value=S.ship.hpMax;
+  document.getElementById('e-ac').value=S.ship.ac;
+  document.getElementById('e-spd').value=S.ship.speed;
+  document.getElementById('e-sname').value=S.ship.name;
+}
+function applyShipEdit(){
+  const n=v=>{ const x=parseInt(document.getElementById(v).value); return isNaN(x)?null:x; };
+  const nm=document.getElementById('e-sname').value.trim();
+  if(nm) S.ship.name=nm;
+  if(n('e-hpm')!==null&&n('e-hpm')>0) S.ship.hpMax=n('e-hpm');
+  if(n('e-hpc')!==null) S.ship.hpCur=Math.max(0,Math.min(S.ship.hpMax,n('e-hpc')));
+  if(n('e-ac')!==null) S.ship.ac=Math.max(0,n('e-ac'));
+  if(n('e-spd')!==null) S.ship.speed=Math.max(0,n('e-spd'));
+  renderShip(); save();
+}
+
+// ══════════════════════════════════════════
+//  COINS
+// ══════════════════════════════════════════
+function adjCoin(t,sign){
+  const a=Math.max(1,parseInt(document.getElementById('i-'+t).value)||1);
+  S.coins[t]=Math.max(0,S.coins[t]+sign*a);
+  renderCoins(); save();
+}
+function renderCoins(){
+  ['pp','gp','sp','cp'].forEach(t=>document.getElementById('v-'+t).textContent=S.coins[t]);
+  const tot=S.coins.pp*10+S.coins.gp+S.coins.sp/10+S.coins.cp/100;
+  document.getElementById('total-gp').textContent=tot.toFixed(2)+' gp';
+}
+
+// ══════════════════════════════════════════
+//  INVENTORY
+// ══════════════════════════════════════════
+function addRow(){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input type="text" placeholder="Item…" oninput="saveInv()"></td>
+    <td><input type="text" placeholder="What is it…" oninput="saveInv()"></td>
+    <td><input type="text" placeholder="Notes…" oninput="saveInv()"></td>
+    <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
+  document.getElementById('inv-body').appendChild(tr);
+}
+function delRow(b){ b.closest('tr').remove(); saveInv(); }
+function saveInv(){
+  S.inventory=[];
+  document.querySelectorAll('#inv-body tr').forEach(tr=>{
+    const i=tr.querySelectorAll('input');
+    S.inventory.push([i[0].value,i[1].value,i[2].value]);
+  });
+  save();
+}
+function renderInventory(){
+  const tb=document.getElementById('inv-body'); tb.innerHTML='';
+  const rows=S.inventory&&S.inventory.length?S.inventory:[['','','']];
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><input type="text" value="${esc(r[0])}" placeholder="Item…" oninput="saveInv()"></td>
+      <td><input type="text" value="${esc(r[1])}" placeholder="What is it…" oninput="saveInv()"></td>
+      <td><input type="text" value="${esc(r[2])}" placeholder="Notes…" oninput="saveInv()"></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ══════════════════════════════════════════
+//  SHIP
+// ══════════════════════════════════════════
+function loadShipImg(inp){
+  if(!inp.files[0]) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    S.shipImg=e.target.result;
+    document.getElementById('ship-img').src=S.shipImg;
+    document.getElementById('ship-img').style.display='block';
+    document.getElementById('ship-ph').style.display='none';
+    save();
+  };
+  r.readAsDataURL(inp.files[0]);
+}
+function adjHP(d){ S.ship.hpCur=Math.max(0,Math.min(S.ship.hpMax,S.ship.hpCur+d)); renderShip(); save(); }
+function adjStat(k,d){
+  if(k==='ac')    S.ship.ac=Math.max(0,S.ship.ac+d);
+  if(k==='speed') S.ship.speed=Math.max(0,S.ship.speed+d);
+  renderShip(); save();
+}
+function renderShip(){
+  document.getElementById('ship-hp').textContent=S.ship.hpCur;
+  document.getElementById('ship-ac').textContent=S.ship.ac;
+  document.getElementById('ship-spd').textContent=S.ship.speed+' kn';
+  document.getElementById('ship-name-disp').textContent=S.ship.name||'Vessel';
+  const pct=S.ship.hpMax>0?(S.ship.hpCur/S.ship.hpMax)*100:0;
+  const bar=document.getElementById('hp-bar');
+  bar.style.width=pct+'%';
+  bar.style.background=pct>60?'var(--green2)':pct>30?'var(--gold2)':'var(--red2)';
+  if(S.shipImg){
+    document.getElementById('ship-img').src=S.shipImg;
+    document.getElementById('ship-img').style.display='block';
+    document.getElementById('ship-ph').style.display='none';
+  }
+}
+
+// ══════════════════════════════════════════
+//  WEAPONS
+// ══════════════════════════════════════════
+//  SHIP DIAGRAM + WEAPONS
+// ══════════════════════════════════════════
+let _popSide=null, _popIdx=null;
+
+function renderWeapons(){
+  const wrap = document.getElementById('ship-diagram-wrap');
+  if(!wrap) return;
+  const stbd = S.weapons.starboard || ['','','','','',''];
+  const port  = S.weapons.port     || ['','','','','',''];
+
+  // Helper: abbreviate weapon name for slot label
+  function slotLabel(id){
+    if(!id) return '—';
+    const w = WEAPONS.find(x=>x.id===id);
+    if(!w) return '—';
+    // short abbrev
+    const map = {carronade:'Carr.',culverin:'Culv.',falconet:'Falc.',longgun:'L.Gun',longnine:'L.9',saker:'Sakr.',swivel:'Swvl.'};
+    return map[id] || w.name.slice(0,5);
+  }
+  function slotDice(id){
+    if(!id) return '';
+    const w = WEAPONS.find(x=>x.id===id);
+    return w?.dice||'';
+  }
+  function crewOnly(id){
+    if(!id) return false;
+    return WEAPONS.find(x=>x.id===id)?.crewOnly||false;
+  }
+
+  // Color for slot based on weapon
+  function slotFill(id){
+    if(!id) return '#1a1208';
+    return '#2a1e08';
+  }
+  function slotStroke(id){
+    if(!id) return '#3e2e1a';
+    return '#c49a1a';
+  }
+
+  // Build SVG
+  const W=440, H=320;
+  // ship hull polygon points (top-down view, bow at top)
+  // Slots: 6 per side, evenly spaced vertically
+  const slotY = [60,100,140,180,220,260];
+  const portX  = 52;  // port side x (left)
+  const stbdX  = W-52; // starboard x (right)
+  const slotW  = 70, slotH = 30;
+
+  let svg = `<svg class="ship-diagram" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hullGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a1e0a"/>
+      <stop offset="100%" stop-color="#1a1208"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hull (top-down silhouette) -->
+  <path d="M${W/2},12 C${W/2-30},12 ${W/2-80},40 ${W/2-90},80
+           L${W/2-90},240 C${W/2-90},270 ${W/2-50},300 ${W/2},305
+           C${W/2+50},300 ${W/2+90},270 ${W/2+90},240
+           L${W/2+90},80 C${W/2+80},40 ${W/2+30},12 ${W/2},12Z"
+    fill="url(#hullGrad)" stroke="#5c4228" stroke-width="2"/>
+
+  <!-- Bow arrow -->
+  <text x="${W/2}" y="24" text-anchor="middle" font-size="10" fill="#6a5038" font-family="Cinzel,serif">▲ BOW</text>
+
+  <!-- Mast -->
+  <line x1="${W/2}" y1="50" x2="${W/2}" y2="280" stroke="#5c4228" stroke-width="3"/>
+  <ellipse cx="${W/2}" cy="165" rx="18" ry="18" fill="#1a1208" stroke="#5c4228" stroke-width="1.5"/>
+  <text x="${W/2}" y="170" text-anchor="middle" font-size="9" fill="#6a5038" font-family="Cinzel,serif">⚓</text>
+
+  <!-- Side labels -->
+  <text x="14" y="165" text-anchor="middle" font-size="9" fill="#6a5038" font-family="Cinzel,serif" transform="rotate(-90,14,165)">◀ PORT</text>
+  <text x="${W-14}" y="165" text-anchor="middle" font-size="9" fill="#6a5038" font-family="Cinzel,serif" transform="rotate(90,${W-14},165)">STARBOARD ▶</text>`;
+
+  // PORT slots (left side)
+  for(let i=0;i<6;i++){
+    const id = port[i]||'';
+    const y  = slotY[i];
+    const x  = portX - slotW/2;
+    const lbl= slotLabel(id);
+    const dice=slotDice(id);
+    const co = crewOnly(id);
+    svg += `
+  <g onclick="openWeaponPopup('port',${i})" style="cursor:pointer">
+    <rect x="${x}" y="${y-slotH/2}" width="${slotW}" height="${slotH}" rx="4"
+      fill="${slotFill(id)}" stroke="${slotStroke(id)}" stroke-width="${id?1.5:1}"/>
+    <!-- connector line -->
+    <line x1="${x+slotW}" y1="${y}" x2="${W/2-90}" y2="${y}" stroke="#3e2e1a" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="${x+slotW/2}" y="${y-3}" text-anchor="middle" font-size="9" fill="${id?'#e0b445':'#6a5038'}" font-family="Cinzel,serif">${lbl}</text>
+    <text x="${x+slotW/2}" y="${y+9}" text-anchor="middle" font-size="8" fill="${co?'#e85c1a':id?'#b8a078':'#3e2e1a'}" font-family="Cinzel,serif">${dice}${co?' ☠':''}</text>
+  </g>`;
+  }
+
+  // STARBOARD slots (right side)
+  for(let i=0;i<6;i++){
+    const id = stbd[i]||'';
+    const y  = slotY[i];
+    const x  = stbdX - slotW/2;
+    const lbl= slotLabel(id);
+    const dice=slotDice(id);
+    const co = crewOnly(id);
+    svg += `
+  <g onclick="openWeaponPopup('starboard',${i})" style="cursor:pointer">
+    <rect x="${x}" y="${y-slotH/2}" width="${slotW}" height="${slotH}" rx="4"
+      fill="${slotFill(id)}" stroke="${slotStroke(id)}" stroke-width="${id?1.5:1}"/>
+    <line x1="${x}" y1="${y}" x2="${W/2+90}" y2="${y}" stroke="#3e2e1a" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="${x+slotW/2}" y="${y-3}" text-anchor="middle" font-size="9" fill="${id?'#e0b445':'#6a5038'}" font-family="Cinzel,serif">${lbl}</text>
+    <text x="${x+slotW/2}" y="${y+9}" text-anchor="middle" font-size="8" fill="${co?'#e85c1a':id?'#b8a078':'#3e2e1a'}" font-family="Cinzel,serif">${dice}${co?' ☠':''}</text>
+  </g>`;
+  }
+
+  svg += `
+</svg>`;
+  wrap.innerHTML = svg;
+}
+
+function openWeaponPopup(side, idx){
+  _popSide = side; _popIdx = idx;
+  const sideLabel = side==='port' ? '◀ Port' : 'Starboard ▶';
+  document.getElementById('wpop-title').textContent = `${sideLabel} — Slot ${idx+1}`;
+  const sel = document.getElementById('wpop-sel');
+  sel.innerHTML='';
+  WEAPONS.forEach(w=>{
+    const o=document.createElement('option');
+    o.value=w.id; o.textContent=w.name;
+    if((S.weapons[side]||[])[idx]===w.id) o.selected=true;
+    sel.appendChild(o);
+  });
+  const cur = WEAPONS.find(w=>w.id===(S.weapons[side]||[])[idx]);
+  document.getElementById('wpop-info').textContent = cur?.note||'— Empty slot';
+  document.getElementById('wpop').classList.add('open');
+  document.getElementById('wpop-overlay').classList.add('open');
+}
+
+function onPopupWeaponChange(){
+  const id = document.getElementById('wpop-sel').value;
+  const w  = WEAPONS.find(x=>x.id===id);
+  document.getElementById('wpop-info').textContent = w?.note||'— Empty slot';
+  if(_popSide!==null && _popIdx!==null){
+    S.weapons[_popSide][_popIdx] = id;
+    save();
+    renderWeapons();
+  }
+}
+
+function closeWeaponPopup(){
+  document.getElementById('wpop').classList.remove('open');
+  document.getElementById('wpop-overlay').classList.remove('open');
+  _popSide=null; _popIdx=null;
+}
+
+// ══════════════════════════════════════════
+//  MOTES
+// ══════════════════════════════════════════
+function renderMotes(){
+  const g=document.getElementById('mote-grid'); g.innerHTML='';
+  MOTES.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='mote-box has-tip';
+    d.style.cssText=`border-color:${m.color};background:${m.bgColor}`;
+    d.innerHTML=`<div class="mote-lbl" style="color:${m.color}">${m.icon} ${m.name.toUpperCase()}
+        <span class="tip-icon">ⓘ</span>
+        <div class="tip-box"><b>${m.spell}</b><br>${m.tooltip}</div>
+      </div>
+      <div class="mote-ctrl">
+        <button class="btn-pm sub" onclick="adjMote('${m.id}',-1)">−</button>
+        <div class="mote-count" id="mote-${m.id}">${S.motes[m.id]||0}</div>
+        <button class="btn-pm add" onclick="adjMote('${m.id}',1)">+</button>
+      </div>`;
+    g.appendChild(d);
+  });
+}
+function adjMote(id,d){ S.motes[id]=Math.max(0,(S.motes[id]||0)+d); document.getElementById('mote-'+id).textContent=S.motes[id]; save(); }
+
+// ══════════════════════════════════════════
+//  CREW
+// ══════════════════════════════════════════
+function renderCrew(){
+  const list=document.getElementById('crew-list'); list.innerHTML='';
+  CREW.forEach(c=>{
+    const div=document.createElement('div'); div.className='crew-row';
+    const sel=document.createElement('select'); sel.className='crew-sel';
+    c.levels.forEach(l=>{
+      const o=document.createElement('option'); o.value=l; o.textContent=l;
+      if(S.crew[c.id]===l) o.selected=true; sel.appendChild(o);
+    });
+    sel.onchange=()=>{ S.crew[c.id]=sel.value; renderGrubCalc(); save(); };
+    div.innerHTML=`<div class="crew-icon">${c.icon}</div>
+      <div class="crew-info">
+        <div class="crew-role">${c.name}</div>
+        <div class="crew-ability">${c.ability}</div>
+      </div>`;
+    div.appendChild(sel); list.appendChild(div);
+  });
+}
+
+// ══════════════════════════════════════════
+//  SUPPLIES / STORES
+// ══════════════════════════════════════════
+function adjSup(k,d){
+  const mx=S.supplyMax[k]!==undefined?S.supplyMax[k]:9999;
+  S.supplies[k]=Math.max(0,Math.min(mx,S.supplies[k]+d));
+  renderSupplies(); save();
+}
+function applySupEdit(){
+  ['grub','grog','gear','crew'].forEach(k=>{
+    const el=document.getElementById('e-'+k+'-max');
+    if(!el) return;
+    const v=parseInt(el.value);
+    if(!isNaN(v)&&v>=0) S.supplyMax[k]=v;
+  });
+  renderSupplies(); save();
+}
+function renderSupplies(){
+  const colors={grub:'var(--green2)',grog:'var(--gold2)',gear:'var(--blue2)',crew:'var(--text2)'};
+  ['crew','grub','grog','gear'].forEach(k=>{
+    const valEl=document.getElementById('s-'+k);
+    if(valEl) valEl.textContent=S.supplies[k];
+    const mx=S.supplyMax[k]||0;
+    // sync the max input field value (without firing oninput)
+    const maxInp=document.getElementById('e-'+k+'-max');
+    if(maxInp && document.activeElement!==maxInp) maxInp.value=mx||'';
+    const bar=document.getElementById('sb-'+k);
+    if(bar&&mx>0){
+      const p=Math.min(100,(S.supplies[k]/mx)*100);
+      bar.style.width=p+'%';
+      bar.style.background=p>50?colors[k]:p>25?'var(--gold2)':'var(--red2)';
+    } else if(bar){ bar.style.width='0%'; }
+  });
+  renderGrubCalc();
+}
+function getCookRank(){ const c=CREW.find(x=>x.id==='cook'); return c?(c.levelRanks[S.crew['cook']||'none']||0):0; }
+function renderGrubCalc(){
+  const crew=S.supplies.crew, base=Math.max(1,Math.ceil(crew/10));
+  const cook=getCookRank(), daily=Math.max(1,base-cook);
+  const stock=S.supplies.grub, days=daily>0?Math.floor(stock/daily):'∞';
+  const dc=(typeof days==='number'&&days<=3)?'var(--red2)':'var(--green2)';
+  const el=document.getElementById('grub-calc');
+  if(el) el.innerHTML=`<strong>🍖 Daily Grub Consumption</strong>
+    Crew: <b style="color:var(--text)">${crew}</b> → Base: <b style="color:var(--text)">${base}/day</b><br>
+    Cook (${S.crew['cook']||'none'}): −${cook} reduction<br>
+    <span style="font-family:'Cinzel',serif;font-size:14px;color:var(--gold2)">▸ ${daily} grub/day</span><br>
+    <span style="color:var(--text3)">Stock: ${stock} &nbsp;·&nbsp; Days left: <b style="color:${dc}">${days}</b></span>`;
+}
+
+// ══════════════════════════════════════════
+//  FALLBACK DATA
+// ══════════════════════════════════════════
+function loadFallback(){
+  WEAPONS=[
+    {id:'',name:'— Empty —',note:''},
+    {id:'carronade',name:'Carronade',note:'d12 · Short range'},
+    {id:'culverin',name:'Culverin',note:'d8 · Normal range'},
+    {id:'falconet',name:'Falconet',note:'d12 · Short · Crew dmg only'},
+    {id:'longgun',name:'Long Gun',note:'d10 · Normal range'},
+    {id:'longnine',name:'Long Nine',note:'d10 · Long range'},
+    {id:'saker',name:'Saker',note:'d6 · Normal range'},
+    {id:'swivel',name:'Swivel Gun',note:'d8 · Short · Crew dmg only'}
+  ];
+  CREW=[
+    {id:'cook',name:'Cook',icon:'🍳',ability:'Reduces daily grub by level rank (min 1)',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}},
+    {id:'quartermaster',name:'Quartermaster',icon:'📋',ability:'Recovers grub & grog equal to level rank per day',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}},
+    {id:'captain',name:'Captain',icon:'⚓',ability:'Morale boost — crew perform better under pressure',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}},
+    {id:'helmsperson',name:'Helmsperson',icon:'🧭',ability:'Extra movement: +1 kn per level rank during maneuvers',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}},
+    {id:'boatswain',name:'Boatswain',icon:'🪣',ability:'Extinguishes fires equal to level rank per encounter',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}},
+    {id:'mastergunner',name:'Master Gunner',icon:'💣',ability:'Reroll 1 die per level rank on cannon attacks per round',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}},
+    {id:'shipwright',name:'Shipwright',icon:'🔨',ability:'Repairs 1 HP per level rank per day while at sea',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}},
+    {id:'navigator',name:'Navigator',icon:'🗺️',ability:'Navigation checks — higher levels reduce chance of getting lost',levels:['none','Student','I','II','III','IV'],levelRanks:{none:0,Student:0,I:1,II:2,III:3,IV:4}}
+  ];
+  MOTES=[
+    {id:'air',name:'Air',icon:'💨',color:'#7ecbef',bgColor:'rgba(126,203,239,.06)',spell:'Gust of Wind',tooltip:'Creates a 60 ft line of wind for 10 minutes, pushing creatures and affecting ranged attacks.'},
+    {id:'fire',name:'Fire',icon:'🔥',color:'#e85c1a',bgColor:'rgba(232,92,26,.06)',spell:'Burning Hands',tooltip:'A cone of fire for 10 minutes, dealing 3d6 fire damage to all creatures in range.'},
+    {id:'earth',name:'Earth',icon:'🪨',color:'#9b7d20',bgColor:'rgba(139,105,20,.06)',spell:'Mold Earth',tooltip:'Shape earth within 30 ft for 10 minutes, creating terrain or crude structures.'},
+    {id:'water',name:'Water',icon:'🌊',color:'#2a8abf',bgColor:'rgba(26,107,154,.06)',spell:'Control Water',tooltip:'Raise, lower, redirect or part water within 300 ft for 10 minutes.'}
+  ];
+  CREW.forEach(c=>{ if(!(c.id in S.crew)) S.crew[c.id]='none'; });
+}
+
+boot();
+</script>
+</body>
+</html>
