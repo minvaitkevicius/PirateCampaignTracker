@@ -229,7 +229,7 @@ body{
 .ship-img-area{
   background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--radius);
   height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  cursor:pointer;overflow:hidden;margin-bottom:12px;
+  overflow:hidden;margin-bottom:12px;position:relative;
 }
 .ship-img-area img{width:100%;height:100%;object-fit:cover;}
 .ship-ph{color:var(--text3);font-family:'Lora',serif;font-size:12px;text-align:center;}
@@ -372,6 +372,69 @@ body{
 }
 .popup-overlay.open{display:block;}
 
+/* ── CROP MODAL ── */
+#crop-modal{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.92);
+  flex-direction:column;align-items:center;justify-content:center;
+  padding:16px;
+}
+#crop-modal.open{display:flex;}
+.crop-title{
+  font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;
+  color:var(--gold);text-transform:uppercase;margin-bottom:10px;
+}
+.crop-hint{
+  font-size:11px;color:var(--text3);font-style:italic;
+  margin-bottom:10px;text-align:center;line-height:1.5;
+}
+#crop-viewport{
+  position:relative;width:100%;max-width:420px;
+  height:220px;overflow:hidden;
+  background:#000;border:1px solid var(--border2);border-radius:4px;
+  touch-action:none;cursor:grab;
+}
+#crop-viewport:active{cursor:grabbing;}
+#crop-img-inner{
+  position:absolute;
+  transform-origin:0 0;
+  user-select:none;-webkit-user-select:none;
+  pointer-events:none;
+}
+#crop-img-inner img{display:block;max-width:none;}
+.crop-frame{
+  position:absolute;inset:0;
+  border:2px solid var(--gold);
+  pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+}
+.crop-corner{
+  position:absolute;width:16px;height:16px;
+  border-color:var(--gold);border-style:solid;
+}
+.crop-corner.tl{top:-1px;left:-1px;border-width:3px 0 0 3px;}
+.crop-corner.tr{top:-1px;right:-1px;border-width:3px 3px 0 0;}
+.crop-corner.bl{bottom:-1px;left:-1px;border-width:0 0 3px 3px;}
+.crop-corner.br{bottom:-1px;right:-1px;border-width:0 3px 3px 0;}
+.crop-zoom-row{
+  display:flex;align-items:center;gap:10px;margin-top:10px;width:100%;max-width:420px;
+}
+.crop-zoom-row label{font-family:'Cinzel',serif;font-size:9px;color:var(--text3);letter-spacing:1px;white-space:nowrap;}
+#crop-zoom{flex:1;accent-color:var(--gold);}
+.crop-btn-row{display:flex;gap:10px;margin-top:12px;width:100%;max-width:420px;}
+.crop-btn{
+  flex:1;border-radius:4px;font-family:'Cinzel',serif;font-size:11px;
+  letter-spacing:1px;padding:11px;cursor:pointer;text-transform:uppercase;border:1px solid;
+  transition:all .15s;
+}
+.crop-btn.confirm{
+  background:linear-gradient(135deg,#2a1c08,#3a2810);
+  border-color:var(--gold);color:var(--gold2);
+}
+.crop-btn.confirm:hover{color:var(--gold3);}
+.crop-btn.cancel{background:transparent;border-color:var(--border2);color:var(--text3);}
+.crop-btn.cancel:hover{border-color:var(--red);color:var(--red2);}
+
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
@@ -477,9 +540,24 @@ body{
       <span>⛵ <span id="ship-name-disp" class="ship-name-tap" onclick="enterShipEditIfNot()" title="Tap to edit name">Vessel</span></span>
       <button class="edit-btn" id="ship-edt" onclick="toggleEdit('ship-sec','ship-edt',openShipEdit,null)">✏ Edit</button>
     </div>
-    <div class="ship-img-area" onclick="document.getElementById('ship-file').click()">
-      <div class="ship-ph" id="ship-ph"><span class="big">⛵</span>Tap to add ship image</div>
+    <div class="ship-img-area" id="ship-img-area">
+      <div class="ship-ph" id="ship-ph" onclick="document.getElementById('ship-file').click()" style="cursor:pointer">
+        <span class="big">⛵</span>Tap to add ship image
+      </div>
       <img id="ship-img" style="display:none" alt="Ship">
+      <!-- change/crop overlay shown when image exists -->
+      <div id="ship-img-overlay" style="display:none;position:absolute;bottom:0;left:0;right:0;
+        display:none;gap:0;flex-direction:row">
+        <button onclick="document.getElementById('ship-file').click()"
+          style="flex:1;background:rgba(0,0,0,.65);border:none;border-top:1px solid var(--border2);
+          color:var(--text2);font-family:Cinzel,serif;font-size:9px;letter-spacing:1px;
+          padding:7px;cursor:pointer;text-transform:uppercase">⟳ Change</button>
+        <button onclick="reopenCrop()"
+          style="flex:1;background:rgba(0,0,0,.65);border:none;border-top:1px solid var(--border2);
+          border-left:1px solid var(--border2);
+          color:var(--text2);font-family:Cinzel,serif;font-size:9px;letter-spacing:1px;
+          padding:7px;cursor:pointer;text-transform:uppercase">✂ Re-crop</button>
+      </div>
     </div>
     <input type="file" id="ship-file" accept="image/*" style="display:none" onchange="loadShipImg(this)">
 
@@ -639,6 +717,29 @@ body{
   <select class="popup-sel" id="wpop-sel" onchange="onPopupWeaponChange()"></select>
   <div class="popup-info" id="wpop-info">—</div>
   <button class="popup-close" onclick="closeWeaponPopup()">✓ Done</button>
+</div>
+
+<!-- ═══ CROP MODAL ═══ -->
+<div id="crop-modal">
+  <div class="crop-title">✂ Crop Ship Image</div>
+  <p class="crop-hint">Drag to pan · Pinch or use slider to zoom</p>
+  <div id="crop-viewport">
+    <div id="crop-img-inner"><img id="crop-src" alt="" draggable="false"></div>
+    <div class="crop-frame">
+      <div class="crop-corner tl"></div>
+      <div class="crop-corner tr"></div>
+      <div class="crop-corner bl"></div>
+      <div class="crop-corner br"></div>
+    </div>
+  </div>
+  <div class="crop-zoom-row">
+    <label>ZOOM</label>
+    <input type="range" id="crop-zoom" min="0.3" max="4" step="0.01" value="1" oninput="cropSetZoom(parseFloat(this.value))">
+  </div>
+  <div class="crop-btn-row">
+    <button class="crop-btn cancel" onclick="closeCropModal()">✕ Cancel</button>
+    <button class="crop-btn confirm" onclick="confirmCrop()">✓ Use This Crop</button>
+  </div>
 </div>
 
 </div><!-- /app -->
@@ -841,17 +942,167 @@ function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').rep
 // ══════════════════════════════════════════
 //  SHIP
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  IMAGE CROP
+// ══════════════════════════════════════════
+const crop = {
+  scale: 1, minScale: 0.3,
+  ox: 0, oy: 0,          // current offset (px in image coords)
+  vw: 0, vh: 0,          // viewport size
+  iw: 0, ih: 0,          // natural image size
+  dragging: false,
+  lastX: 0, lastY: 0,
+  pinchDist: 0
+};
+
 function loadShipImg(inp){
   if(!inp.files[0]) return;
-  const r=new FileReader();
-  r.onload=e=>{
-    S.shipImg=e.target.result;
-    document.getElementById('ship-img').src=S.shipImg;
-    document.getElementById('ship-img').style.display='block';
-    document.getElementById('ship-ph').style.display='none';
-    save();
+  const reader = new FileReader();
+  reader.onload = e => openCropModal(e.target.result);
+  reader.readAsDataURL(inp.files[0]);
+}
+
+function openCropModal(dataUrl){
+  const modal = document.getElementById('crop-modal');
+  const img   = document.getElementById('crop-src');
+  img.onload = () => {
+    crop.iw = img.naturalWidth;
+    crop.ih = img.naturalHeight;
+    const vp = document.getElementById('crop-viewport');
+    crop.vw = vp.clientWidth;
+    crop.vh = vp.clientHeight;
+    // Fit image to fill viewport initially
+    const fitScale = Math.max(crop.vw / crop.iw, crop.vh / crop.ih);
+    crop.minScale = Math.max(0.15, Math.min(fitScale * 0.5, fitScale));
+    crop.scale = fitScale;
+    // Center
+    crop.ox = (crop.iw * crop.scale - crop.vw) / 2;
+    crop.oy = (crop.ih * crop.scale - crop.vh) / 2;
+    document.getElementById('crop-zoom').min  = crop.minScale.toFixed(2);
+    document.getElementById('crop-zoom').max  = (fitScale * 4).toFixed(2);
+    document.getElementById('crop-zoom').value = crop.scale;
+    applyCropTransform();
   };
-  r.readAsDataURL(inp.files[0]);
+  img.src = dataUrl;
+  modal.classList.add('open');
+  attachCropEvents();
+}
+
+function closeCropModal(){
+  document.getElementById('crop-modal').classList.remove('open');
+  detachCropEvents();
+  // reset file input so same file can be re-selected
+  document.getElementById('ship-file').value='';
+}
+
+function applyCropTransform(){
+  // Clamp offsets so image always fills viewport
+  const maxOx = crop.iw * crop.scale - crop.vw;
+  const maxOy = crop.ih * crop.scale - crop.vh;
+  crop.ox = Math.max(0, Math.min(crop.ox, maxOx));
+  crop.oy = Math.max(0, Math.min(crop.oy, maxOy));
+  const inner = document.getElementById('crop-img-inner');
+  inner.style.transform = `translate(${-crop.ox}px, ${-crop.oy}px) scale(${crop.scale})`;
+}
+
+function cropSetZoom(newScale){
+  // Zoom around center of viewport
+  const cx = crop.vw / 2, cy = crop.vh / 2;
+  const imgCx = (crop.ox + cx) / crop.scale;
+  const imgCy = (crop.oy + cy) / crop.scale;
+  crop.scale = newScale;
+  crop.ox = imgCx * crop.scale - cx;
+  crop.oy = imgCy * crop.scale - cy;
+  document.getElementById('crop-zoom').value = newScale;
+  applyCropTransform();
+}
+
+function confirmCrop(){
+  const img = document.getElementById('crop-src');
+  // Source rect in natural image coords
+  const sx = crop.ox / crop.scale;
+  const sy = crop.oy / crop.scale;
+  const sw = crop.vw / crop.scale;
+  const sh = crop.vh / crop.scale;
+  // Output canvas — match viewport aspect, cap at 800px wide
+  const outW = Math.min(800, sw);
+  const outH = Math.round(outW * (sh / sw));
+  const canvas = document.createElement('canvas');
+  canvas.width  = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+  // Compress to JPEG — keeps Firestore doc size small
+  S.shipImg = canvas.toDataURL('image/jpeg', 0.82);
+  document.getElementById('ship-img').src = S.shipImg;
+  document.getElementById('ship-img').style.display = 'block';
+  document.getElementById('ship-ph').style.display  = 'none';
+  save();
+  closeCropModal();
+}
+
+// ── Touch/mouse event handling ──
+function cropPointerDown(e){
+  if(e.touches && e.touches.length === 2){
+    crop.pinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    return;
+  }
+  crop.dragging = true;
+  const pt = e.touches ? e.touches[0] : e;
+  crop.lastX = pt.clientX;
+  crop.lastY = pt.clientY;
+  e.preventDefault();
+}
+function cropPointerMove(e){
+  if(e.touches && e.touches.length === 2){
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    if(crop.pinchDist > 0){
+      const newScale = Math.max(crop.minScale, Math.min(
+        parseFloat(document.getElementById('crop-zoom').max),
+        crop.scale * (dist / crop.pinchDist)
+      ));
+      cropSetZoom(newScale);
+    }
+    crop.pinchDist = dist;
+    e.preventDefault();
+    return;
+  }
+  if(!crop.dragging) return;
+  const pt = e.touches ? e.touches[0] : e;
+  crop.ox += crop.lastX - pt.clientX;
+  crop.oy += crop.lastY - pt.clientY;
+  crop.lastX = pt.clientX;
+  crop.lastY = pt.clientY;
+  applyCropTransform();
+  e.preventDefault();
+}
+function cropPointerUp(){ crop.dragging = false; crop.pinchDist = 0; }
+
+function attachCropEvents(){
+  const vp = document.getElementById('crop-viewport');
+  vp.addEventListener('mousedown',  cropPointerDown, {passive:false});
+  vp.addEventListener('touchstart', cropPointerDown, {passive:false});
+  vp.addEventListener('mousemove',  cropPointerMove, {passive:false});
+  vp.addEventListener('touchmove',  cropPointerMove, {passive:false});
+  vp.addEventListener('mouseup',    cropPointerUp);
+  vp.addEventListener('touchend',   cropPointerUp);
+  vp.addEventListener('mouseleave', cropPointerUp);
+}
+function detachCropEvents(){
+  const vp = document.getElementById('crop-viewport');
+  vp.removeEventListener('mousedown',  cropPointerDown);
+  vp.removeEventListener('touchstart', cropPointerDown);
+  vp.removeEventListener('mousemove',  cropPointerMove);
+  vp.removeEventListener('touchmove',  cropPointerMove);
+  vp.removeEventListener('mouseup',    cropPointerUp);
+  vp.removeEventListener('touchend',   cropPointerUp);
+  vp.removeEventListener('mouseleave', cropPointerUp);
 }
 function adjHP(d){ S.ship.hpCur=Math.max(0,Math.min(S.ship.hpMax,S.ship.hpCur+d)); renderShip(); save(); }
 function adjStat(k,d){
@@ -872,7 +1123,14 @@ function renderShip(){
     document.getElementById('ship-img').src=S.shipImg;
     document.getElementById('ship-img').style.display='block';
     document.getElementById('ship-ph').style.display='none';
+    const ov=document.getElementById('ship-img-overlay');
+    if(ov) ov.style.display='flex';
   }
+}
+
+function reopenCrop(){
+  // Re-open crop modal with the already-stored image for re-cropping
+  if(S.shipImg) openCropModal(S.shipImg);
 }
 
 // ══════════════════════════════════════════
