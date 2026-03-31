@@ -251,6 +251,53 @@ body{
 .ship-name-tap{cursor:pointer;border-bottom:1px dashed var(--border2);padding-bottom:1px;transition:border-color .2s;}
 .ship-name-tap:hover{border-bottom-color:var(--gold);}
 
+/* ── CREW BOON ── */
+.crew-card{margin-bottom:8px;}
+.crew-boon-row{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(0,0,0,.2);border:1px solid var(--border);
+  border-top:none;border-radius:0 0 var(--radius) var(--radius);
+  padding:5px 11px;
+}
+.boon-lbl{font-family:'Cinzel',serif;font-size:9px;color:var(--gold);letter-spacing:1px;white-space:nowrap;flex-shrink:0;}
+.boon-inp{
+  background:transparent;border:none;border-bottom:1px solid var(--border2);
+  color:var(--text2);font-family:'Lora',serif;font-size:12px;font-style:italic;
+  flex:1;padding:2px 0;
+}
+.boon-inp:focus{outline:none;border-bottom-color:var(--gold);}
+
+/* ── MOBILITY SELECT ── */
+.mobility-select-row{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;}
+.mob-opt{
+  display:flex;align-items:center;gap:5px;
+  font-family:'Cinzel',serif;font-size:11px;color:var(--text2);
+  cursor:pointer;letter-spacing:.5px;
+}
+.mob-opt input[type=radio]{accent-color:var(--gold);width:14px;height:14px;}
+
+/* ── MOBILITY GRAPH (view mode) ── */
+.ship-meta-row{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-bottom:8px;padding:6px 2px;
+}
+.mob-display{display:flex;align-items:center;gap:6px;}
+.mob-pip{
+  width:20px;height:20px;border-radius:50%;
+  border:2px solid var(--border2);
+  transition:all .2s;
+}
+.mob-pip.on.high{background:var(--green2);border-color:var(--green2);box-shadow:0 0 6px var(--green2);}
+.mob-pip.on.balanced{background:var(--gold2);border-color:var(--gold2);box-shadow:0 0 6px var(--gold2);}
+.mob-pip.on.low{background:var(--red2);border-color:var(--red2);box-shadow:0 0 6px var(--red2);}
+.mob-label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;}
+.ship-size-badge{
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;
+  color:var(--text3);border:1px solid var(--border);border-radius:3px;
+  padding:2px 7px;text-transform:uppercase;
+}
+.ship-desc{font-family:'Lora',serif;font-size:11px;color:var(--text3);font-style:italic;flex:1;}
+
 /* ── SHIP STATS + STORES unified block ── */
 .ship-stats-stores{margin-top:0;}
 .ship-stats-stores .stat-grid{margin-bottom:10px;}
@@ -288,7 +335,8 @@ body{
 
 /* ── CREW ── */
 .crew-list{display:flex;flex-direction:column;gap:7px;}
-.crew-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:9px 11px;display:flex;align-items:center;gap:8px;}
+.crew-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:9px 11px;display:flex;align-items:center;gap:8px;}
+.crew-card:last-child .crew-boon-row{margin-bottom:0;}
 .crew-icon{font-size:16px;flex-shrink:0;}
 .crew-info{flex:1;}
 .crew-role{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.5px;}
@@ -397,11 +445,13 @@ body{
 #crop-viewport:active{cursor:grabbing;}
 #crop-img-inner{
   position:absolute;
-  transform-origin:0 0;
+  top:0;left:0;
+  transform-origin:top left;
   user-select:none;-webkit-user-select:none;
   pointer-events:none;
+  width:1px; /* explicit, prevents shrink-wrapping */
 }
-#crop-img-inner img{display:block;max-width:none;}
+#crop-img-inner img{display:block;max-width:none;width:auto;height:auto;}
 .crop-frame{
   position:absolute;inset:0;
   border:2px solid var(--gold);
@@ -460,7 +510,7 @@ body{
     <div id="sync-badge">⏳</div>
   </div>
   <div class="tabs">
-    <button class="tab-btn active" onclick="showTab('gold',this)">💰 Gold</button>
+    <button class="tab-btn active" onclick="showTab('gold',this)">📦 Inventory</button>
     <button class="tab-btn" onclick="showTab('ship',this)">⛵ Ship</button>
     <button class="tab-btn" onclick="showTab('crew',this)">👥 Crew</button>
   </div>
@@ -545,18 +595,17 @@ body{
         <span class="big">⛵</span>Tap to add ship image
       </div>
       <img id="ship-img" style="display:none" alt="Ship">
-      <!-- change/crop overlay shown when image exists -->
-      <div id="ship-img-overlay" style="display:none;position:absolute;bottom:0;left:0;right:0;
-        display:none;gap:0;flex-direction:row">
+      <!-- change/crop overlay — only visible in edit mode -->
+      <div id="ship-img-overlay" style="display:none;position:absolute;bottom:0;left:0;right:0;flex-direction:row">
         <button onclick="document.getElementById('ship-file').click()"
-          style="flex:1;background:rgba(0,0,0,.65);border:none;border-top:1px solid var(--border2);
+          style="flex:1;background:rgba(0,0,0,.75);border:none;border-top:1px solid var(--border2);
           color:var(--text2);font-family:Cinzel,serif;font-size:9px;letter-spacing:1px;
-          padding:7px;cursor:pointer;text-transform:uppercase">⟳ Change</button>
+          padding:8px;cursor:pointer;text-transform:uppercase">⟳ Change</button>
         <button onclick="reopenCrop()"
-          style="flex:1;background:rgba(0,0,0,.65);border:none;border-top:1px solid var(--border2);
+          style="flex:1;background:rgba(0,0,0,.75);border:none;border-top:1px solid var(--border2);
           border-left:1px solid var(--border2);
           color:var(--text2);font-family:Cinzel,serif;font-size:9px;letter-spacing:1px;
-          padding:7px;cursor:pointer;text-transform:uppercase">✂ Re-crop</button>
+          padding:8px;cursor:pointer;text-transform:uppercase">✂ Re-crop</button>
       </div>
     </div>
     <input type="file" id="ship-file" accept="image/*" style="display:none" onchange="loadShipImg(this)">
@@ -606,6 +655,9 @@ body{
           </div>
         </div>
       </div>
+
+      <!-- Mobility / size display (view mode) -->
+      <div class="view-mode ship-meta-row" id="ship-meta-row"></div>
 
       <!-- stores row — always editable inline, no edit button needed -->
       <div class="stores-layout">
@@ -661,10 +713,28 @@ body{
 
     </div><!-- /ship-stats-stores -->
 
-    <!-- ship name edit -->
+    <!-- ship edit fields -->
     <div class="edit-mode" style="margin-top:8px">
-      <div class="edit-lbl">Ship Name</div>
+      <div class="edit-lbl">Apply Ship Class (prefills stats)</div>
+      <select class="edit-inp" id="e-ship-class" onchange="applyShipClass(this.value)" style="font-size:13px;padding:6px">
+        <option value="">— Select class to prefill —</option>
+      </select>
+
+      <div class="edit-lbl" style="margin-top:10px">Ship Name</div>
       <input class="edit-inp" id="e-sname" type="text" placeholder="Enter ship name…" oninput="applyShipEdit()">
+
+      <div class="edit-lbl">Size &amp; Description</div>
+      <div style="display:grid;grid-template-columns:120px 1fr;gap:6px">
+        <input class="edit-inp" id="e-size" type="text" placeholder="e.g. Small" oninput="applyShipEdit()">
+        <input class="edit-inp" id="e-desc" type="text" placeholder="Ship description…" oninput="applyShipEdit()">
+      </div>
+
+      <div class="edit-lbl">Mobility</div>
+      <div class="mobility-select-row">
+        <label class="mob-opt"><input type="radio" name="mobility" value="High" onchange="applyShipEdit()"> High</label>
+        <label class="mob-opt"><input type="radio" name="mobility" value="Balanced" onchange="applyShipEdit()"> Balanced</label>
+        <label class="mob-opt"><input type="radio" name="mobility" value="Low" onchange="applyShipEdit()"> Low</label>
+      </div>
     </div>
   </div>
 
@@ -688,9 +758,10 @@ body{
     <div class="inv-wrap">
       <table class="inv-tbl" id="upgrades-tbl">
         <thead><tr>
-          <th style="width:28%">Name</th>
-          <th style="width:35%">Effect</th>
-          <th style="width:29%">Comment</th>
+          <th style="width:22%">Name</th>
+          <th style="width:20%">Part</th>
+          <th style="width:30%">Effect</th>
+          <th style="width:20%">Comment</th>
           <th style="width:8%"></th>
         </tr></thead>
         <tbody id="upgrades-body"></tbody>
@@ -750,18 +821,19 @@ body{
 // ══════════════════════════════════════════
 let S = {
   coins:{pp:0,gp:0,sp:0,cp:0},
-  ship:{name:'The Unnamed Vessel',hpCur:100,hpMax:100,ac:15,speed:5},
+  ship:{name:'The Unnamed Vessel',hpCur:100,hpMax:100,ac:15,speed:5,mobility:'Balanced',size:'',description:'',weaponSlots:6},
   weapons:{starboard:['','','','','',''],port:['','','','','','']},
   motes:{air:0,fire:0,earth:0,water:0},
   crew:{},
   supplies:{crew:10,grub:10,grog:6,gear:10},
   supplyMax:{crew:20,grub:10,grog:6,gear:10},
   inventory:[],
+  crewBoons:{},
   upgrades:[],
   shipImg:null
 };
 
-let WEAPONS=[], CREW=[], MOTES=[], CONFIG={};
+let WEAPONS=[], CREW=[], MOTES=[], SHIPS=[], CONFIG={};
 let PARTY='';
 
 // ══════════════════════════════════════════
@@ -782,17 +854,26 @@ async function boot(){
 
   // 3. Load data files
   try{
-    [WEAPONS,CREW,MOTES] = await Promise.all([
+    [WEAPONS,CREW,MOTES,SHIPS] = await Promise.all([
       fetch('data/weapons.json').then(r=>r.json()),
       fetch('data/crew.json').then(r=>r.json()),
-      fetch('data/motes.json').then(r=>r.json())
+      fetch('data/motes.json').then(r=>r.json()),
+      fetch('data/ships.json').then(r=>r.json())
     ]);
   }catch(e){ loadFallback(); }
 
   CREW.forEach(c=>{ if(!(c.id in S.crew)) S.crew[c.id]='none'; });
 
   // 4. Expose callbacks for Firebase module
-  window._mergeRemote = remote => { S=deepMerge(S,remote); renderAll(); };
+  window._mergeRemote = remote => {
+    S=deepMerge(S,remote);
+    if(_activeInput){
+      // Don't re-render text tables while user is typing - only update non-text UI
+      renderCoins(); renderShip(); renderWeapons(); renderMotes(); renderSupplies();
+    } else {
+      renderAll();
+    }
+  };
   window._setSyncStatus = (msg,v) => {
     const el=document.getElementById('sync-badge');
     if(el){ el.textContent=msg; el.style.color=`var(--${v})`; }
@@ -833,10 +914,15 @@ function deepMerge(t,s){
   return o;
 }
 let _st=null;
+// Track whether user is actively in a text field
+let _activeInput = false;
+document.addEventListener('focusin',  e => { if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') _activeInput=true; });
+document.addEventListener('focusout', e => { if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){ _activeInput=false; save(); } });
+
 function save(){
   try{ localStorage.setItem('dnd3-'+PARTY,JSON.stringify(S)); }catch(e){}
   clearTimeout(_st);
-  _st=setTimeout(()=>{ if(window._pushToFirebase) window._pushToFirebase(S); },700);
+  _st=setTimeout(()=>{ if(window._pushToFirebase) window._pushToFirebase(S); },1200);
 }
 function loadLocal(){
   try{
@@ -872,6 +958,7 @@ function toggleEdit(secId,btnId,openFn,_){
   btn.classList.toggle('on',on);
   if(on && openFn) openFn();
   else renderAll();
+  if(secId==='ship-sec') syncShipImgOverlay();
 }
 function openShipEdit(){
   document.getElementById('e-hpc').value=S.ship.hpCur;
@@ -879,16 +966,58 @@ function openShipEdit(){
   document.getElementById('e-ac').value=S.ship.ac;
   document.getElementById('e-spd').value=S.ship.speed;
   document.getElementById('e-sname').value=S.ship.name;
+  document.getElementById('e-size').value=S.ship.size||'';
+  document.getElementById('e-desc').value=S.ship.description||'';
+  // Set mobility radio
+  const mob=S.ship.mobility||'Balanced';
+  document.querySelectorAll('input[name="mobility"]').forEach(r=>{ r.checked=(r.value===mob); });
+  // Populate ship class dropdown
+  const sel=document.getElementById('e-ship-class');
+  if(sel && sel.options.length<=1){
+    SHIPS.forEach(sh=>{
+      const o=document.createElement('option');
+      o.value=sh.id; o.textContent=`${sh.name} (${sh.size})`;
+      sel.appendChild(o);
+    });
+  }
 }
 function applyShipEdit(){
-  const n=v=>{ const x=parseInt(document.getElementById(v).value); return isNaN(x)?null:x; };
-  const nm=document.getElementById('e-sname').value.trim();
+  const n=v=>{ const x=parseInt(document.getElementById(v)?.value); return isNaN(x)?null:x; };
+  const nm=document.getElementById('e-sname')?.value.trim();
   if(nm) S.ship.name=nm;
   if(n('e-hpm')!==null&&n('e-hpm')>0) S.ship.hpMax=n('e-hpm');
   if(n('e-hpc')!==null) S.ship.hpCur=Math.max(0,Math.min(S.ship.hpMax,n('e-hpc')));
   if(n('e-ac')!==null) S.ship.ac=Math.max(0,n('e-ac'));
   if(n('e-spd')!==null) S.ship.speed=Math.max(0,n('e-spd'));
+  const sz=document.getElementById('e-size')?.value.trim();
+  if(sz!==undefined) S.ship.size=sz;
+  const dc=document.getElementById('e-desc')?.value.trim();
+  if(dc!==undefined) S.ship.description=dc;
+  const mob=document.querySelector('input[name="mobility"]:checked')?.value;
+  if(mob) S.ship.mobility=mob;
   renderShip(); save();
+}
+
+function applyShipClass(shipId){
+  if(!shipId) return;
+  const sh=SHIPS.find(x=>x.id===shipId);
+  if(!sh) return;
+  // Prefill all stats
+  S.ship.hpMax=sh.hpMax; S.ship.hpCur=sh.hp;
+  S.ship.ac=sh.ac; S.ship.speed=sh.speed;
+  S.ship.mobility=sh.mobility; S.ship.size=sh.size;
+  S.ship.description=sh.description;
+  // Prefill supply maxes
+  S.supplyMax.grub=sh.grubCap; S.supplyMax.grog=sh.grogCap;
+  S.supplyMax.gear=sh.gearCap; S.supplyMax.crew=sh.crewMax;
+  // Prefill weapon slots count (trim or expand arrays)
+  const slots=sh.weaponSlots||6;
+  S.ship.weaponSlots=slots;
+  S.weapons.starboard=(S.weapons.starboard||[]).slice(0,slots).concat(Array(Math.max(0,slots-(S.weapons.starboard||[]).length)).fill(''));
+  S.weapons.port=(S.weapons.port||[]).slice(0,slots).concat(Array(Math.max(0,slots-(S.weapons.port||[]).length)).fill(''));
+  // Refresh edit fields
+  openShipEdit();
+  renderShip(); renderWeapons(); renderSupplies(); save();
 }
 
 // ══════════════════════════════════════════
@@ -997,12 +1126,15 @@ function closeCropModal(){
 
 function applyCropTransform(){
   // Clamp offsets so image always fills viewport
-  const maxOx = crop.iw * crop.scale - crop.vw;
-  const maxOy = crop.ih * crop.scale - crop.vh;
+  const scaledW = crop.iw * crop.scale;
+  const scaledH = crop.ih * crop.scale;
+  const maxOx = Math.max(0, scaledW - crop.vw);
+  const maxOy = Math.max(0, scaledH - crop.vh);
   crop.ox = Math.max(0, Math.min(crop.ox, maxOx));
   crop.oy = Math.max(0, Math.min(crop.oy, maxOy));
   const inner = document.getElementById('crop-img-inner');
-  inner.style.transform = `translate(${-crop.ox}px, ${-crop.oy}px) scale(${crop.scale})`;
+  // Scale first (from top-left origin), then shift by negative offset
+  inner.style.transform = `scale(${crop.scale}) translate(${-crop.ox/crop.scale}px, ${-crop.oy/crop.scale}px)`;
 }
 
 function cropSetZoom(newScale){
@@ -1123,9 +1255,36 @@ function renderShip(){
     document.getElementById('ship-img').src=S.shipImg;
     document.getElementById('ship-img').style.display='block';
     document.getElementById('ship-ph').style.display='none';
-    const ov=document.getElementById('ship-img-overlay');
-    if(ov) ov.style.display='flex';
   }
+  syncShipImgOverlay();
+  renderShipMeta();
+}
+
+function renderShipMeta(){
+  const el=document.getElementById('ship-meta-row');
+  if(!el) return;
+  const mob=S.ship.mobility||'Balanced';
+  const mobClass=mob.toLowerCase();
+  // Pips: High=3 on, Balanced=2 on, Low=1 on
+  const pipOn={High:3,Balanced:2,Low:1}[mob]||2;
+  const pipColor=mobClass;
+  let pips='';
+  for(let i=0;i<3;i++) pips+=`<div class="mob-pip ${i<pipOn?'on '+pipColor:''}"></div>`;
+  const sz=S.ship.size?`<span class="ship-size-badge">${S.ship.size}</span>`:'';
+  const desc=S.ship.description?`<span class="ship-desc">${S.ship.description}</span>`:'';
+  el.innerHTML=`
+    <div class="mob-display">
+      <span class="mob-label">${mob}</span>
+      ${pips}
+    </div>
+    ${sz}${desc}`;
+}
+
+function syncShipImgOverlay(){
+  const ov  = document.getElementById('ship-img-overlay');
+  const sec = document.getElementById('ship-sec');
+  if(!ov || !S.shipImg) return;
+  ov.style.display = sec.classList.contains('editing') ? 'flex' : 'none';
 }
 
 function reopenCrop(){
@@ -1195,7 +1354,10 @@ function renderWeapons(){
   const W=440, H=320;
   // ship hull polygon points (top-down view, bow at top)
   // Slots: 6 per side, evenly spaced vertically
-  const slotY = [60,100,140,180,220,260];
+  // Dynamic slot positions
+  const slotSpacing = Math.min(40, Math.floor(220/Math.max(numSlots,1)));
+  const slotStartY = 60;
+  const slotY = Array.from({length:numSlots},(_,i)=>slotStartY+i*slotSpacing);
   const portX  = 52;  // port side x (left)
   const stbdX  = W-52; // starboard x (right)
   const slotW  = 70, slotH = 30;
@@ -1228,7 +1390,7 @@ function renderWeapons(){
   <text x="${W-14}" y="165" text-anchor="middle" font-size="9" fill="#6a5038" font-family="Cinzel,serif" transform="rotate(90,${W-14},165)">STARBOARD ▶</text>`;
 
   // PORT slots (left side)
-  for(let i=0;i<6;i++){
+  for(let i=0;i<numSlots;i++){
     const id = port[i]||'';
     const y  = slotY[i];
     const x  = portX - slotW/2;
@@ -1247,7 +1409,8 @@ function renderWeapons(){
   }
 
   // STARBOARD slots (right side)
-  for(let i=0;i<6;i++){
+  const numSlots = S.ship.weaponSlots||6;
+  for(let i=0;i<numSlots;i++){
     const id = stbd[i]||'';
     const y  = slotY[i];
     const x  = stbdX - slotW/2;
@@ -1333,20 +1496,41 @@ function adjMote(id,d){ S.motes[id]=Math.max(0,(S.motes[id]||0)+d); document.get
 function renderCrew(){
   const list=document.getElementById('crew-list'); list.innerHTML='';
   CREW.forEach(c=>{
-    const div=document.createElement('div'); div.className='crew-row';
+    const wrapper=document.createElement('div'); wrapper.className='crew-card';
+
+    // Top row: icon, name/ability, level select
+    const topRow=document.createElement('div'); topRow.className='crew-row';
     const sel=document.createElement('select'); sel.className='crew-sel';
     c.levels.forEach(l=>{
       const o=document.createElement('option'); o.value=l; o.textContent=l;
       if(S.crew[c.id]===l) o.selected=true; sel.appendChild(o);
     });
     sel.onchange=()=>{ S.crew[c.id]=sel.value; renderGrubCalc(); save(); };
-    div.innerHTML=`<div class="crew-icon">${c.icon}</div>
+    topRow.innerHTML=`<div class="crew-icon">${c.icon}</div>
       <div class="crew-info">
         <div class="crew-role">${c.name}</div>
         <div class="crew-ability">${c.ability}</div>
       </div>`;
-    div.appendChild(sel); list.appendChild(div);
+    topRow.appendChild(sel);
+
+    // Boon row
+    const boonRow=document.createElement('div'); boonRow.className='crew-boon-row';
+    const boonVal=S.crewBoons?.[c.id]||'';
+    boonRow.innerHTML=`<span class="boon-lbl">✦ Boon:</span>
+      <input class="boon-inp" type="text" placeholder="Special ability or reward…"
+        value="${esc(boonVal)}"
+        oninput="saveCrewBoon('${c.id}', this.value)">`;
+
+    wrapper.appendChild(topRow);
+    wrapper.appendChild(boonRow);
+    list.appendChild(wrapper);
   });
+}
+
+function saveCrewBoon(id, val){
+  if(!S.crewBoons) S.crewBoons={};
+  S.crewBoons[id]=val;
+  save();
 }
 
 // ══════════════════════════════════════════
@@ -1428,6 +1612,14 @@ function loadFallback(){
     {id:'earth',name:'Earth',icon:'🪨',color:'#9b7d20',bgColor:'rgba(139,105,20,.06)',spell:'Mold Earth',tooltip:'Shape earth within 30 ft for 10 minutes, creating terrain or crude structures.'},
     {id:'water',name:'Water',icon:'🌊',color:'#2a8abf',bgColor:'rgba(26,107,154,.06)',spell:'Control Water',tooltip:'Raise, lower, redirect or part water within 300 ft for 10 minutes.'}
   ];
+  SHIPS=[
+    {id:'sloop',name:'Sloop',dimensions:'45×15',size:'Small',description:'Fast and nimble pirate vessel.',hp:12,hpMax:12,ac:12,speed:3,mobility:'High',weaponSlots:4,grubCap:10,grogCap:6,gearCap:10,crewMax:20},
+    {id:'brigantine',name:'Brigantine',dimensions:'80×25',size:'Medium',description:'Versatile two-masted vessel.',hp:20,hpMax:20,ac:13,speed:2,mobility:'Balanced',weaponSlots:6,grubCap:20,grogCap:12,gearCap:20,crewMax:50},
+    {id:'galleon',name:'Galleon',dimensions:'140×40',size:'Large',description:'Massive war galleon.',hp:40,hpMax:40,ac:15,speed:1,mobility:'Low',weaponSlots:6,grubCap:50,grogCap:30,gearCap:40,crewMax:120},
+    {id:'schooner',name:'Schooner',dimensions:'60×18',size:'Small',description:'Lean coastal raider.',hp:16,hpMax:16,ac:12,speed:3,mobility:'High',weaponSlots:4,grubCap:14,grogCap:8,gearCap:14,crewMax:30},
+    {id:'frigate',name:'Frigate',dimensions:'120×35',size:'Large',description:'Fast naval warship.',hp:30,hpMax:30,ac:14,speed:2,mobility:'Balanced',weaponSlots:6,grubCap:35,grogCap:20,gearCap:30,crewMax:80},
+    {id:'custom',name:'Custom Vessel',dimensions:'—',size:'—',description:'Unique vessel.',hp:20,hpMax:20,ac:13,speed:2,mobility:'Balanced',weaponSlots:6,grubCap:20,grogCap:12,gearCap:20,crewMax:40}
+  ];
   CREW.forEach(c=>{ if(!(c.id in S.crew)) S.crew[c.id]='none'; });
 }
 
@@ -1453,6 +1645,7 @@ function addUpgrade(){
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td><input type="text" placeholder="Upgrade name…" oninput="saveUpgrades()"></td>
+    <td><input type="text" placeholder="Sail/Hull/Nav…" oninput="saveUpgrades()"></td>
     <td><input type="text" placeholder="What it does…" oninput="saveUpgrades()"></td>
     <td><input type="text" placeholder="Notes…" oninput="saveUpgrades()"></td>
     <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
@@ -1463,7 +1656,7 @@ function saveUpgrades(){
   S.upgrades = [];
   document.querySelectorAll('#upgrades-body tr').forEach(tr=>{
     const i = tr.querySelectorAll('input');
-    S.upgrades.push([i[0].value, i[1].value, i[2].value]);
+    S.upgrades.push([i[0].value, i[1].value, i[2].value, i[3]?i[3].value:'']);
   });
   save();
 }
@@ -1476,8 +1669,9 @@ function renderUpgrades(){
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="text" value="${esc(r[0])}" placeholder="Upgrade name…" oninput="saveUpgrades()"></td>
-      <td><input type="text" value="${esc(r[1])}" placeholder="What it does…" oninput="saveUpgrades()"></td>
-      <td><input type="text" value="${esc(r[2])}" placeholder="Notes…" oninput="saveUpgrades()"></td>
+      <td><input type="text" value="${esc(r[1]||'')}" placeholder="Sail/Hull/Nav…" oninput="saveUpgrades()"></td>
+      <td><input type="text" value="${esc(r[2])}" placeholder="What it does…" oninput="saveUpgrades()"></td>
+      <td><input type="text" value="${esc(r[3]||'')}" placeholder="Notes…" oninput="saveUpgrades()"></td>
       <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
     tbody.appendChild(tr);
   });
