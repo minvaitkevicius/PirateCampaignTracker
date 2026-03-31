@@ -24,13 +24,24 @@ window._setupFirebase = async function(cfg, partyCode){
     window._docRef = doc(db, 'parties', partyCode);
     window._fbReady = true;
 
+    let _initialSnap = true;
     onSnapshot(window._docRef, snap => {
       if(!snap.exists()) return;
+      // Always process the first snapshot (initial data load from Firestore)
+      if(_initialSnap){
+        _initialSnap = false;
+        window._mergeRemote(snap.data());
+        setSyncStatus('🟢 Synced','green2');
+        return;
+      }
+      // Subsequent snapshots: skip if this is an echo of our own write
       if(window._ignoreNext){ window._ignoreNext=false; return; }
       window._mergeRemote(snap.data());
+      setSyncStatus('🟢 Synced','green2');
     });
 
-    setSyncStatus('🟢 Synced','green2');
+    // Don't call setSyncStatus here — wait for first snapshot
+    // setSyncStatus('🟢 Synced','green2');
   } catch(e) {
     console.warn('Firebase error:', e);
     setSyncStatus('🔴 Offline only','red2');
@@ -41,7 +52,10 @@ window._pushToFirebase = async function(state){
   if(!window._fbReady || !window._docRef) return;
   try {
     window._ignoreNext = true;
-    await setDoc(window._docRef, state, {merge:true});
+    // Strip shipImg (large base64) — stored locally only, not synced
+    const toSync = Object.assign({}, state);
+    delete toSync.shipImg;
+    await setDoc(window._docRef, toSync, {merge:true});
   } catch(e) {
     setSyncStatus('⚠️ Sync error','gold2');
   }
@@ -817,6 +831,14 @@ body{
 
 <script>
 // ══════════════════════════════════════════
+//  SYNC STATUS — registered early so Firebase module can call it anytime
+// ══════════════════════════════════════════
+window._setSyncStatus = function(msg, v){
+  const el = document.getElementById('sync-badge');
+  if(el){ el.textContent=msg; el.style.color=`var(--${v})`; }
+};
+
+// ══════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════
 let S = {
@@ -874,10 +896,7 @@ async function boot(){
       renderAll();
     }
   };
-  window._setSyncStatus = (msg,v) => {
-    const el=document.getElementById('sync-badge');
-    if(el){ el.textContent=msg; el.style.color=`var(--${v})`; }
-  };
+  // _setSyncStatus already registered at script load; nothing to do here
 
   // 5. Load local state first so UI is instant
   loadLocal();
@@ -1302,8 +1321,12 @@ let _popSide=null, _popIdx=null;
 function renderWeapons(){
   const wrap = document.getElementById('ship-diagram-wrap');
   if(!wrap) return;
-  const stbd = S.weapons.starboard || ['','','','','',''];
-  const port  = S.weapons.port     || ['','','','','',''];
+
+  // numSlots MUST be declared first — used throughout
+  const numSlots = S.ship.weaponSlots || 6;
+
+  const stbd = S.weapons.starboard || Array(numSlots).fill('');
+  const port  = S.weapons.port     || Array(numSlots).fill('');
 
   // Helper: abbreviate weapon name for slot label
   function slotLabel(id){
@@ -1409,7 +1432,6 @@ function renderWeapons(){
   }
 
   // STARBOARD slots (right side)
-  const numSlots = S.ship.weaponSlots||6;
   for(let i=0;i<numSlots;i++){
     const id = stbd[i]||'';
     const y  = slotY[i];
