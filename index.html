@@ -277,7 +277,20 @@ body{
 .crew-boon-row{
   display:flex;align-items:center;gap:6px;
   background:rgba(0,0,0,.2);border:1px solid var(--border);
+  border-top:none;
+  padding:5px 11px;
+}
+.crew-sheet-row{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(0,0,0,.25);border:1px solid var(--border);
   border-top:none;border-radius:0 0 var(--radius) var(--radius);
+  padding:5px 11px;
+  min-height:34px;
+}
+.crew-name-row{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(0,0,0,.15);border:1px solid var(--border);
+  border-top:none;
   padding:5px 11px;
 }
 .boon-lbl{font-family:'Cinzel',serif;font-size:9px;color:var(--gold);letter-spacing:1px;white-space:nowrap;flex-shrink:0;}
@@ -287,6 +300,29 @@ body{
   flex:1;padding:2px 0;
 }
 .boon-inp:focus{outline:none;border-bottom-color:var(--gold);}
+.crew-name-inp{
+  background:transparent;border:none;border-bottom:1px solid var(--border2);
+  color:var(--text);font-family:'Cinzel',serif;font-size:12px;font-weight:600;
+  flex:1;padding:2px 0;letter-spacing:.5px;
+}
+.crew-name-inp:focus{outline:none;border-bottom-color:var(--gold);}
+.sheet-inp{
+  background:transparent;border:none;border-bottom:1px solid var(--border2);
+  color:var(--text3);font-family:'Lora',serif;font-size:11px;
+  flex:1;padding:2px 0;min-width:0;
+}
+.sheet-inp:focus{outline:none;border-bottom-color:var(--gold);color:var(--text2);}
+.sheet-open-btn{
+  flex-shrink:0;
+  background:transparent;border:1px solid var(--border2);border-radius:3px;
+  color:var(--text3);font-size:10px;padding:3px 7px;cursor:pointer;
+  font-family:'Cinzel',serif;letter-spacing:.5px;text-decoration:none;
+  white-space:nowrap;transition:all .15s;
+  display:flex;align-items:center;gap:3px;
+}
+.sheet-open-btn:hover{border-color:var(--gold);color:var(--gold2);}
+.sheet-open-btn.has-link{border-color:var(--blue2);color:var(--blue2);}
+.sheet-open-btn.has-link:hover{border-color:var(--gold);color:var(--gold2);}
 
 /* ── MOBILITY SELECT ── */
 .mobility-select-row{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;}
@@ -858,6 +894,8 @@ let S = {
   supplyMax:{crew:20,grub:10,grog:6,gear:10},
   inventory:[],
   crewBoons:{},
+  crewNames:{},
+  crewSheets:{},
   upgrades:[],
   shipImg:null
 };
@@ -962,13 +1000,20 @@ document.addEventListener('focusout', e => {
       if(tbl.querySelector('#upgrades-body')) collectUpgrades();
       else if(tbl.querySelector('#inv-body')) collectInv();
     }
-    // Boon fields
-    const boonInp=e.target.closest('.crew-boon-row')?.querySelector('.boon-inp');
-    if(boonInp){
-      const card=e.target.closest('.crew-card');
-      if(card){
-        const crewId=card.dataset.crewId;
-        if(crewId){ if(!S.crewBoons)S.crewBoons={}; S.crewBoons[crewId]=boonInp.value; }
+    // Crew card fields (name, boon, sheet)
+    const crewCard=e.target.closest('.crew-card');
+    if(crewCard){
+      const crewId=crewCard.dataset.crewId;
+      if(crewId){
+        if(!S.crewBoons)  S.crewBoons={};
+        if(!S.crewNames)  S.crewNames={};
+        if(!S.crewSheets) S.crewSheets={};
+        const boonInp  = crewCard.querySelector('.boon-inp');
+        const nameInp  = crewCard.querySelector('.crew-name-inp');
+        const sheetInp = crewCard.querySelector('.sheet-inp');
+        if(boonInp)  S.crewBoons[crewId]  = boonInp.value;
+        if(nameInp)  S.crewNames[crewId]  = nameInp.value;
+        if(sheetInp) S.crewSheets[crewId] = sheetInp.value.trim();
       }
     }
     // Cancel any pending debounce and push NOW
@@ -1562,7 +1607,7 @@ function renderCrew(){
   CREW.forEach(c=>{
     const wrapper=document.createElement('div'); wrapper.className='crew-card'; wrapper.dataset.crewId=c.id;
 
-    // Top row: icon, name/ability, level select
+    // ── Top row: icon, role/ability, level select ──
     const topRow=document.createElement('div'); topRow.className='crew-row';
     const sel=document.createElement('select'); sel.className='crew-sel';
     c.levels.forEach(l=>{
@@ -1577,18 +1622,61 @@ function renderCrew(){
       </div>`;
     topRow.appendChild(sel);
 
-    // Boon row
+    // ── Name row ──
+    const nameRow=document.createElement('div'); nameRow.className='crew-name-row';
+    const nameVal=S.crewNames?.[c.id]||'';
+    nameRow.innerHTML=`<span class="boon-lbl">👤</span>
+      <input class="crew-name-inp" type="text" placeholder="Character name…"
+        value="${esc(nameVal)}">`;
+
+    // ── Boon row ──
     const boonRow=document.createElement('div'); boonRow.className='crew-boon-row';
     const boonVal=S.crewBoons?.[c.id]||'';
-    boonRow.innerHTML=`<span class="boon-lbl">✦ Boon:</span>
-      <input class="boon-inp" type="text" placeholder="Special ability or reward…"
-        value="${esc(boonVal)}"
-        >`;
+    boonRow.innerHTML=`<span class="boon-lbl">✦</span>
+      <input class="boon-inp" type="text" placeholder="Boon / special ability…"
+        value="${esc(boonVal)}">`;
+
+    // ── Sheet link row ──
+    const sheetRow=document.createElement('div'); sheetRow.className='crew-sheet-row';
+    const sheetVal=S.crewSheets?.[c.id]||'';
+    const hasLink=!!sheetVal;
+    sheetRow.innerHTML=`<span class="boon-lbl">📄</span>
+      <input class="sheet-inp" type="url" placeholder="Paste Google Drive / image link…"
+        value="${esc(sheetVal)}">
+      <a class="sheet-open-btn ${hasLink?'has-link':''}"
+        href="${hasLink?sheetVal:'#'}"
+        target="_blank" rel="noopener"
+        onclick="return handleSheetOpen(event, this)"
+        title="${hasLink?'Open stat block':'No link set'}">
+        ${hasLink?'↗ Open':'↗'}
+      </a>`;
+
+    // Wire up the open-button to stay current as user types
+    const sheetInp = sheetRow.querySelector('.sheet-inp');
+    const sheetBtn = sheetRow.querySelector('.sheet-open-btn');
+    sheetInp.addEventListener('input', ()=>{
+      const v=sheetInp.value.trim();
+      sheetBtn.href = v||'#';
+      sheetBtn.className = 'sheet-open-btn'+(v?' has-link':'');
+      sheetBtn.textContent = v?'↗ Open':'↗';
+    });
 
     wrapper.appendChild(topRow);
+    wrapper.appendChild(nameRow);
     wrapper.appendChild(boonRow);
+    wrapper.appendChild(sheetRow);
     list.appendChild(wrapper);
   });
+}
+
+function handleSheetOpen(e, btn){
+  if(!btn.href || btn.href==='#' || btn.href.endsWith('#')){
+    e.preventDefault();
+    // Focus the input instead
+    btn.closest('.crew-sheet-row')?.querySelector('.sheet-inp')?.focus();
+    return false;
+  }
+  return true; // let it open
 }
 
 function saveCrewBoon(id, val){
