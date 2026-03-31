@@ -1,9 +1,9 @@
 {
   "name": "The Unnamed Vessel",
-  "hpMax": 100,
-  "hpCurrent": 100,
+  "hpMax": 15,
+  "hpCurrent": 15,
   "ac": 15,
-  "speed": 30,
+  "speed": 5,
   "weaponSlotsPerSide": 6,
   "notes": "Edit this file to change ship defaults. hpMax sets the starting maximum HP."
 }
