@@ -70,5 +70,13 @@
     "ability": "Cancel 1d4 casualties during combat.",
     "levels": ["none", "Student", "I", "II", "III", "IV"],
     "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "artist",
+    "name": "Artist",
+    "icon": "🎨",
+    "ability": "Makes the ship look nice .",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
   }
 ]
