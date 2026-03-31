@@ -1,6 +1,6 @@
 {
-  "grubRule": "Every 10 crew members consume 1 grub per day (minimum 1). The Cook's level rank reduces daily consumption by that amount (minimum 1 consumed).",
-  "grogRule": "Grog is tracked separately. Quartermaster recovers grog equal to level rank per day.",
-  "gearRule": "Gear is general equipment stock. Shipwright consumes gear for repairs.",
-  "crewRule": "Total crew count drives grub consumption. Adjust when crew are lost or gained."
+  "grubRule": "Every 10 crew members consume 1 grub per day. The Cook's level rank reduces daily consumption by that amount (min 1).",
+  "grogRule": "Quartermaster recovers grog equal to level rank per day.",
+  "gearRule": "Shipwright consumes gear for repairs.",
+  "crewRule": "Total crew count."
 }
