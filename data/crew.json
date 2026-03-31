@@ -27,7 +27,7 @@
     "id": "helmsperson",
     "name": "Helmsperson",
     "icon": "🧭",
-    "ability": "Provides extra movement. Each level rank adds +5 ft to ship speed during maneuvers.",
+    "ability": "Provides extra movement 1 square/round per level during combat.",
     "levels": ["none", "Student", "I", "II", "III", "IV"],
     "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
   },
@@ -35,7 +35,7 @@
     "id": "boatswain",
     "name": "Boatswain",
     "icon": "🪣",
-    "ability": "Extinguishes fires — can automatically put out fires equal to level rank per encounter.",
+    "ability": "Automatically put out fires equal to level rank per encounter.",
     "levels": ["none", "Student", "I", "II", "III", "IV"],
     "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
   },
@@ -43,7 +43,7 @@
     "id": "mastergunner",
     "name": "Master Gunner",
     "icon": "💣",
-    "ability": "Reroll 1 die per level rank on cannon attacks per round.",
+    "ability": "Reroll 1 die per level rank on cannon attacks per round. Enables advanced ammo.",
     "levels": ["none", "Student", "I", "II", "III", "IV"],
     "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
   },
@@ -51,7 +51,7 @@
     "id": "shipwright",
     "name": "Shipwright",
     "icon": "🔨",
-    "ability": "Repairs 1 HP per level rank per day while at sea.",
+    "ability": "Can repair 1 HP per level rank per day while at sea, +1 HP when reparing in port per Gear..",
     "levels": ["none", "Student", "I", "II", "III", "IV"],
     "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
   },
@@ -59,7 +59,15 @@
     "id": "navigator",
     "name": "Navigator",
     "icon": "🗺️",
-    "ability": "Performs navigation checks. Higher levels reduce chance of getting lost and improve travel time.",
+    "ability": "Reroll a failed navigation roll, 1 reroll per trip per level.",
+    "levels": ["none", "Student", "I", "II", "III", "IV"],
+    "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
+  },
+  {
+    "id": "surgeon",
+    "name": "Surgeon",
+    "icon": "🩹",
+    "ability": "Cancel 1d4 casualties during combat.",
     "levels": ["none", "Student", "I", "II", "III", "IV"],
     "levelRanks": { "none": 0, "Student": 0, "I": 1, "II": 2, "III": 3, "IV": 4 }
   }
