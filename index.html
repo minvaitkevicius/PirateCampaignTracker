@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- v8.1 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>⚓ Party Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -52,9 +56,12 @@ window._pushToFirebase = async function(state){
   if(!window._fbReady || !window._docRef) return;
   try {
     window._ignoreNext = true;
-    // Strip shipImg (large base64) — stored locally only, not synced
     const toSync = Object.assign({}, state);
+    // Strip shipImg — stored locally only
     delete toSync.shipImg;
+    // Firestore cannot store arrays-of-arrays — convert to arrays of objects
+    toSync.inventory = (state.inventory||[]).map(r=>({n:r[0]||'',d:r[1]||'',c:r[2]||''}));
+    toSync.upgrades  = (state.upgrades||[]).map(r=>({n:r[0]||'',p:r[1]||'',e:r[2]||'',c:r[3]||''}));
     await setDoc(window._docRef, toSync, {merge:true});
   } catch(e) {
     setSyncStatus('⚠️ Sync error','gold2');
@@ -888,9 +895,17 @@ async function boot(){
 
   // 4. Expose callbacks for Firebase module
   window._mergeRemote = remote => {
-    S=deepMerge(S,remote);
+    // Deserialize Firestore objects back to arrays-of-arrays
+    const r = Object.assign({}, remote);
+    if(r.inventory && r.inventory.length && typeof r.inventory[0]==='object' && !Array.isArray(r.inventory[0])){
+      r.inventory = r.inventory.map(o=>[o.n||'', o.d||'', o.c||'']);
+    }
+    if(r.upgrades && r.upgrades.length && typeof r.upgrades[0]==='object' && !Array.isArray(r.upgrades[0])){
+      r.upgrades = r.upgrades.map(o=>[o.n||'', o.p||'', o.e||'', o.c||'']);
+    }
+    S = deepMerge(S, r);
     if(_activeInput){
-      // Don't re-render text tables while user is typing - only update non-text UI
+      // Don't re-render text tables while user is typing
       renderCoins(); renderShip(); renderWeapons(); renderMotes(); renderSupplies();
     } else {
       renderAll();
@@ -935,8 +950,34 @@ function deepMerge(t,s){
 let _st=null;
 // Track whether user is actively in a text field
 let _activeInput = false;
-document.addEventListener('focusin',  e => { if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') _activeInput=true; });
-document.addEventListener('focusout', e => { if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){ _activeInput=false; save(); } });
+document.addEventListener('focusin',  e => {
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') _activeInput=true;
+});
+document.addEventListener('focusout', e => {
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){
+    _activeInput=false;
+    // Collect latest values from whichever table is active, then flush immediately
+    const tbl=e.target.closest('table');
+    if(tbl){
+      if(tbl.querySelector('#upgrades-body')) collectUpgrades();
+      else if(tbl.querySelector('#inv-body')) collectInv();
+    }
+    // Boon fields
+    const boonInp=e.target.closest('.crew-boon-row')?.querySelector('.boon-inp');
+    if(boonInp){
+      const card=e.target.closest('.crew-card');
+      if(card){
+        const crewId=card.dataset.crewId;
+        if(crewId){ if(!S.crewBoons)S.crewBoons={}; S.crewBoons[crewId]=boonInp.value; }
+      }
+    }
+    // Cancel any pending debounce and push NOW
+    clearTimeout(_st);
+    _st=null;
+    localStorage.setItem('dnd3-'+PARTY,JSON.stringify(S));
+    if(window._pushToFirebase) window._pushToFirebase(S);
+  }
+});
 
 function save(){
   try{ localStorage.setItem('dnd3-'+PARTY,JSON.stringify(S)); }catch(e){}
@@ -1058,29 +1099,30 @@ function renderCoins(){
 // ══════════════════════════════════════════
 function addRow(){
   const tr=document.createElement('tr');
-  tr.innerHTML=`<td><input type="text" placeholder="Item…" oninput="saveInv()"></td>
-    <td><input type="text" placeholder="What is it…" oninput="saveInv()"></td>
-    <td><input type="text" placeholder="Notes…" oninput="saveInv()"></td>
+  tr.innerHTML=`<td><input type="text" placeholder="Item…"></td>
+    <td><input type="text" placeholder="What is it…"></td>
+    <td><input type="text" placeholder="Notes…"></td>
     <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
   document.getElementById('inv-body').appendChild(tr);
 }
-function delRow(b){ b.closest('tr').remove(); saveInv(); }
-function saveInv(){
+function delRow(b){ b.closest('tr').remove(); collectInv(); save(); }
+// collectInv: read DOM → S.inventory (no push)
+function collectInv(){
   S.inventory=[];
   document.querySelectorAll('#inv-body tr').forEach(tr=>{
     const i=tr.querySelectorAll('input');
-    S.inventory.push([i[0].value,i[1].value,i[2].value]);
+    if(i.length>=3) S.inventory.push([i[0].value,i[1].value,i[2].value]);
   });
-  save();
 }
+function saveInv(){ collectInv(); save(); }
 function renderInventory(){
   const tb=document.getElementById('inv-body'); tb.innerHTML='';
   const rows=S.inventory&&S.inventory.length?S.inventory:[['','','']];
   rows.forEach(r=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><input type="text" value="${esc(r[0])}" placeholder="Item…" oninput="saveInv()"></td>
-      <td><input type="text" value="${esc(r[1])}" placeholder="What is it…" oninput="saveInv()"></td>
-      <td><input type="text" value="${esc(r[2])}" placeholder="Notes…" oninput="saveInv()"></td>
+    tr.innerHTML=`<td><input type="text" value="${esc(r[0])}" placeholder="Item…"></td>
+      <td><input type="text" value="${esc(r[1])}" placeholder="What is it…"></td>
+      <td><input type="text" value="${esc(r[2])}" placeholder="Notes…"></td>
       <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
     tb.appendChild(tr);
   });
@@ -1518,7 +1560,7 @@ function adjMote(id,d){ S.motes[id]=Math.max(0,(S.motes[id]||0)+d); document.get
 function renderCrew(){
   const list=document.getElementById('crew-list'); list.innerHTML='';
   CREW.forEach(c=>{
-    const wrapper=document.createElement('div'); wrapper.className='crew-card';
+    const wrapper=document.createElement('div'); wrapper.className='crew-card'; wrapper.dataset.crewId=c.id;
 
     // Top row: icon, name/ability, level select
     const topRow=document.createElement('div'); topRow.className='crew-row';
@@ -1541,7 +1583,7 @@ function renderCrew(){
     boonRow.innerHTML=`<span class="boon-lbl">✦ Boon:</span>
       <input class="boon-inp" type="text" placeholder="Special ability or reward…"
         value="${esc(boonVal)}"
-        oninput="saveCrewBoon('${c.id}', this.value)">`;
+        >`;
 
     wrapper.appendChild(topRow);
     wrapper.appendChild(boonRow);
@@ -1666,22 +1708,22 @@ function enterShipEditIfNot(){
 function addUpgrade(){
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="text" placeholder="Upgrade name…" oninput="saveUpgrades()"></td>
-    <td><input type="text" placeholder="Sail/Hull/Nav…" oninput="saveUpgrades()"></td>
-    <td><input type="text" placeholder="What it does…" oninput="saveUpgrades()"></td>
-    <td><input type="text" placeholder="Notes…" oninput="saveUpgrades()"></td>
+    <td><input type="text" placeholder="Upgrade name…"></td>
+    <td><input type="text" placeholder="Sail/Hull/Nav…"></td>
+    <td><input type="text" placeholder="What it does…"></td>
+    <td><input type="text" placeholder="Notes…"></td>
     <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
   document.getElementById('upgrades-body').appendChild(tr);
 }
-function delUpgrade(btn){ btn.closest('tr').remove(); saveUpgrades(); }
-function saveUpgrades(){
+function delUpgrade(btn){ btn.closest('tr').remove(); collectUpgrades(); save(); }
+function collectUpgrades(){
   S.upgrades = [];
   document.querySelectorAll('#upgrades-body tr').forEach(tr=>{
     const i = tr.querySelectorAll('input');
-    S.upgrades.push([i[0].value, i[1].value, i[2].value, i[3]?i[3].value:'']);
+    if(i.length>=3) S.upgrades.push([i[0].value, i[1].value, i[2].value, i[3]?i[3].value:'']);
   });
-  save();
 }
+function saveUpgrades(){ collectUpgrades(); save(); }
 function renderUpgrades(){
   const tbody = document.getElementById('upgrades-body');
   if(!tbody) return;
@@ -1690,10 +1732,10 @@ function renderUpgrades(){
   rows.forEach(r=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" value="${esc(r[0])}" placeholder="Upgrade name…" oninput="saveUpgrades()"></td>
-      <td><input type="text" value="${esc(r[1]||'')}" placeholder="Sail/Hull/Nav…" oninput="saveUpgrades()"></td>
-      <td><input type="text" value="${esc(r[2])}" placeholder="What it does…" oninput="saveUpgrades()"></td>
-      <td><input type="text" value="${esc(r[3]||'')}" placeholder="Notes…" oninput="saveUpgrades()"></td>
+      <td><input type="text" value="${esc(r[0])}" placeholder="Upgrade name…"></td>
+      <td><input type="text" value="${esc(r[1]||'')}" placeholder="Sail/Hull/Nav…"></td>
+      <td><input type="text" value="${esc(r[2])}" placeholder="What it does…"></td>
+      <td><input type="text" value="${esc(r[3]||'')}" placeholder="Notes…"></td>
       <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
     tbody.appendChild(tr);
   });
