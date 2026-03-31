@@ -229,21 +229,34 @@ body{
 .gt-val{font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--gold3);}
 .conv-note{font-size:11px;color:var(--text3);text-align:center;margin-top:5px;font-style:italic;}
 
-/* ── INVENTORY ── */
-.inv-wrap{overflow-x:auto;}
-.inv-tbl{width:100%;border-collapse:collapse;min-width:260px;}
-.inv-tbl th{
-  font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;
-  color:var(--gold);text-align:left;padding:5px 7px;
-  border-bottom:1px solid var(--border);text-transform:uppercase;
+/* ── INVENTORY LIST ── */
+.inv-list{display:flex;flex-direction:column;gap:5px;}
+.inv-item{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);padding:9px 12px;
+  display:flex;align-items:center;gap:10px;
+  cursor:pointer;transition:border-color .15s;
+  min-height:44px;
 }
-.inv-tbl td{padding:5px 7px;border-bottom:1px solid rgba(60,40,20,.4);vertical-align:top;}
-.inv-tbl tr:last-child td{border-bottom:none;}
-.inv-tbl input{
-  background:transparent;border:none;color:var(--text);
-  font-family:'Lora',serif;font-size:13px;width:100%;padding:1px 0;
+.inv-item:hover{border-color:var(--border2);}
+.inv-item:active{border-color:var(--gold);}
+.inv-item-main{flex:1;min-width:0;}
+.inv-item-name{
+  font-family:'Cinzel',serif;font-size:13px;font-weight:600;
+  color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.inv-tbl input:focus{outline:none;border-bottom:1px solid var(--gold);}
+.inv-item-sub{
+  font-size:11px;color:var(--text3);font-style:italic;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-top:2px;
+}
+.inv-item-qty{
+  flex-shrink:0;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:12px;
+  font-family:'Cinzel',serif;font-size:12px;font-weight:700;color:var(--gold2);
+  padding:2px 9px;min-width:32px;text-align:center;
+}
+.inv-item-arrow{color:var(--text3);font-size:12px;flex-shrink:0;}
 .del-btn{background:transparent;border:none;color:var(--red);font-size:13px;cursor:pointer;opacity:.4;padding:0 3px;}
 .del-btn:hover{opacity:1;}
 .add-row-btn{
@@ -252,6 +265,53 @@ body{
   padding:8px;width:100%;cursor:pointer;margin-top:7px;transition:all .2s;
 }
 .add-row-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── ITEM POPUP ── */
+.itpop-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.itpop-del{
+  background:transparent;border:none;font-size:22px;cursor:pointer;
+  opacity:.45;padding:4px;line-height:1;transition:opacity .15s;
+}
+.itpop-del:hover{opacity:1;}
+.itpop-qty-row{
+  display:flex;align-items:center;gap:0;
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:16px;overflow:hidden;
+}
+.itpop-qty-btn{
+  background:transparent;border:none;
+  color:var(--text2);font-size:28px;font-weight:300;
+  width:58px;height:68px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background .12s,color .12s;user-select:none;
+}
+.itpop-qty-btn:active{background:rgba(255,255,255,.04);}
+.itpop-qty-btn.sub{border-right:1px solid var(--border);color:var(--red2);font-size:32px;}
+.itpop-qty-btn.add{border-left:1px solid var(--border);color:var(--green2);font-size:32px;}
+.itpop-qty-center{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:8px 0;
+}
+.itpop-qty-val{
+  font-family:'Cinzel',serif;font-size:42px;font-weight:700;
+  color:var(--text);line-height:1;
+}
+.itpop-qty-lbl{
+  font-family:'Cinzel',serif;font-size:8px;letter-spacing:3px;
+  color:var(--text3);text-transform:uppercase;
+}
+.itpop-field{margin-bottom:13px;}
+.itpop-lbl{
+  display:block;font-family:'Cinzel',serif;font-size:9px;
+  letter-spacing:1.5px;color:var(--gold);margin-bottom:6px;text-transform:uppercase;
+}
+.itpop-inp{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);
+  color:var(--text);font-family:'Lora',serif;font-size:15px;
+  padding:12px 13px;width:100%;line-height:1.4;
+}
+.itpop-inp:focus{outline:2px solid var(--gold);outline-offset:-1px;}
+.itpop-ta{resize:none;line-height:1.5;min-height:76px;}
 
 /* ── SHIP ── */
 .ship-img-area{
@@ -280,20 +340,7 @@ body{
 .ship-name-tap:hover{border-bottom-color:var(--gold);}
 
 /* ── CREW BOON ── */
-.qty-ctrl{display:flex;align-items:center;gap:2px;}
-.qty-btn{
-  background:var(--bg3);border:1px solid var(--border);border-radius:2px;
-  color:var(--text2);font-size:13px;width:20px;height:22px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;line-height:1;padding:0;
-}
-.qty-btn:active{transform:scale(.85);}
-.qty-inp{
-  background:transparent;border:none;border-bottom:1px solid var(--border);
-  color:var(--text);font-family:'Cinzel',serif;font-size:12px;
-  width:28px;text-align:center;padding:1px 0;
-}
-.qty-inp:focus{outline:none;border-bottom-color:var(--gold);}
+/* qty-ctrl removed — qty now in item popup */
 .crew-card{margin-bottom:8px;}
 .crew-card-body{overflow:hidden;max-height:0;transition:max-height .28s ease;}
 .crew-card.expanded .crew-card-body{max-height:220px;}
@@ -475,6 +522,27 @@ body{
   grid-column:1/-1;grid-row:2;overflow:hidden;
 }
 .store-bar{height:100%;border-radius:3px;transition:width .3s,background .3s;}
+
+/* Crew warning states */
+.store-row.crew-warn{
+  border-color:var(--gold);
+  background:rgba(196,154,26,.07);
+}
+.store-row.crew-crit{
+  border-color:var(--red2);
+  background:rgba(224,64,48,.08);
+  animation:crew-pulse 2s ease-in-out infinite;
+}
+@keyframes crew-pulse{
+  0%,100%{box-shadow:none;}
+  50%{box-shadow:0 0 8px rgba(224,64,48,.35) inset;}
+}
+.crew-warn-badge{
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:.5px;
+  padding:2px 6px;border-radius:3px;flex-shrink:0;
+}
+.crew-warn .crew-warn-badge{background:rgba(196,154,26,.2);color:var(--gold2);}
+.crew-crit .crew-warn-badge{background:rgba(224,64,48,.2);color:var(--red2);}
 .grub-calc{
   background:var(--panel2);border:1px solid var(--border2);
   border-radius:var(--radius);padding:10px 13px;margin-top:8px;
@@ -665,18 +733,7 @@ body{
   </div>
   <div class="sec">
     <div class="sec-title"><span>📜 Inventory</span></div>
-    <div class="inv-wrap">
-      <table class="inv-tbl">
-        <thead><tr>
-          <th style="width:22%">Name</th>
-          <th style="width:30%">Description</th>
-          <th style="width:24%">Comment</th>
-          <th style="width:12%">Qty</th>
-          <th style="width:8%"></th>
-        </tr></thead>
-        <tbody id="inv-body"></tbody>
-      </table>
-    </div>
+    <div class="inv-list" id="inv-body"></div>
     <button class="add-row-btn" onclick="addRow()">＋ ADD ITEM</button>
   </div>
 </div>
@@ -761,7 +818,7 @@ body{
 
       <!-- stores row — always editable inline, no edit button needed -->
       <div class="stores-layout">
-        <div class="store-row">
+        <div class="store-row" id="crew-store-row">
           <div class="store-icon-lbl">⚓ Crew</div>
           <div class="store-ctrl">
             <button class="btn-pm sub" onclick="adjSup('crew',-1)">−</button>
@@ -771,6 +828,7 @@ body{
           <div class="store-max-wrap">
             <span class="store-slash">/ </span><input class="store-max-inp" id="e-crew-max" type="number" min="0" placeholder="max" oninput="applySupEdit()" title="Set max crew">
           </div>
+          <span class="crew-warn-badge" id="crew-warn-badge" style="display:none"></span>
         </div>
         <div class="store-row">
           <div class="store-icon-lbl">🍖 Grub</div>
@@ -923,6 +981,41 @@ body{
   </div>
 </div>
 
+<!-- ═══ ITEM EDIT POPUP ═══ -->
+<div class="popup-overlay" id="itpop-overlay" onclick="closeItemPopup()"></div>
+<div class="weapon-popup" id="itpop">
+  <div class="itpop-header">
+    <div class="popup-title" id="itpop-title">Edit Item</div>
+    <button class="itpop-del" onclick="deleteCurrentItem()" title="Delete item">🗑</button>
+  </div>
+
+  <div class="itpop-qty-row">
+    <button class="itpop-qty-btn sub" onclick="itpopAdjQty(-1)">−</button>
+    <div class="itpop-qty-center">
+      <div class="itpop-qty-val" id="itpop-qty">1</div>
+      <div class="itpop-qty-lbl">quantity</div>
+    </div>
+    <button class="itpop-qty-btn add" onclick="itpopAdjQty(1)">+</button>
+  </div>
+
+  <div class="itpop-field">
+    <label class="itpop-lbl">NAME</label>
+    <input class="itpop-inp" id="itpop-name" type="text" placeholder="Item name…">
+  </div>
+  <div class="itpop-field">
+    <label class="itpop-lbl">DESCRIPTION</label>
+    <textarea class="itpop-inp itpop-ta" id="itpop-desc" placeholder="What is it, what does it do…" rows="3"></textarea>
+  </div>
+  <div class="itpop-field">
+    <label class="itpop-lbl">COMMENT</label>
+    <input class="itpop-inp" id="itpop-comment" type="text" placeholder="Notes, location, owner…">
+  </div>
+
+  <div class="wpop-btn-row" style="margin-top:10px">
+    <button class="popup-close" onclick="closeItemPopup()">✓ Done</button>
+  </div>
+</div>
+
 </div><!-- /app -->
 
 <script>
@@ -1068,10 +1161,13 @@ document.addEventListener('focusout', e => {
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'){
     _activeInput=false;
     // Collect latest values from whichever table is active, then flush immediately
+    // Upgrades table (inventory now uses popup, no table)
     const tbl=e.target.closest('table');
-    if(tbl){
-      if(tbl.querySelector('#upgrades-body')) collectUpgrades();
-      else if(tbl.querySelector('#inv-body')) collectInv();
+    if(tbl && tbl.querySelector('#upgrades-body')) collectUpgrades();
+    // Item popup fields — sync title live
+    if(e.target.id==='itpop-name'){
+      const v=e.target.value||'New Item';
+      document.getElementById('itpop-title').textContent=v;
     }
     // Crew card fields (name, boon, sheet)
     const crewCard=e.target.closest('.crew-card');
@@ -1215,57 +1311,104 @@ function renderCoins(){
 // ══════════════════════════════════════════
 //  INVENTORY
 // ══════════════════════════════════════════
+// ── Item popup state ──
+let _itIdx = null; // index of item being edited
+
 function addRow(){
-  const tr=document.createElement('tr');
-  tr.innerHTML=`<td><input type="text" placeholder="Item…"></td>
-    <td><input type="text" placeholder="What is it…"></td>
-    <td><input type="text" placeholder="Notes…"></td>
-    <td><div class="qty-ctrl">
-      <button class="qty-btn" onclick="adjQty(this,-1)">−</button>
-      <input class="qty-inp" type="number" min="0" value="1">
-      <button class="qty-btn" onclick="adjQty(this,1)">+</button>
-    </div></td>
-    <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
-  document.getElementById('inv-body').appendChild(tr);
+  // Add blank item and immediately open it for editing
+  S.inventory.push(['','','',1]);
+  _itIdx = S.inventory.length - 1;
+  renderInventory();
+  openItemPopup(_itIdx);
+  save();
 }
-function adjQty(btn, delta){
-  const inp = btn.closest('.qty-ctrl').querySelector('.qty-inp');
-  const cur = parseInt(inp.value)||0;
-  inp.value = Math.max(0, cur+delta);
-  collectInv(); save();
-}
-function delRow(b){ b.closest('tr').remove(); collectInv(); save(); }
-// collectInv: read DOM → S.inventory (no push)
+
 function collectInv(){
-  S.inventory=[];
-  document.querySelectorAll('#inv-body tr').forEach(tr=>{
-    const inputs=tr.querySelectorAll('input');
-    if(inputs.length>=3){
-      // inputs: name, desc, comment, qty
-      const qty = inputs[3] ? (parseInt(inputs[3].value)||1) : 1;
-      S.inventory.push([inputs[0].value, inputs[1].value, inputs[2].value, qty]);
-    }
-  });
+  // State is always up-to-date — collectInv is a no-op now
+  // (state is mutated directly in openItemPopup/closeItemPopup)
 }
-function saveInv(){ collectInv(); save(); }
+function saveInv(){ save(); }
+
 function renderInventory(){
-  const tb=document.getElementById('inv-body'); tb.innerHTML='';
-  const rows=S.inventory&&S.inventory.length?S.inventory:[['','','']];
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    const qty = r[3]!==undefined ? r[3] : 1;
-    tr.innerHTML=`<td><input type="text" value="${esc(r[0])}" placeholder="Item…"></td>
-      <td><input type="text" value="${esc(r[1])}" placeholder="What is it…"></td>
-      <td><input type="text" value="${esc(r[2])}" placeholder="Notes…"></td>
-      <td><div class="qty-ctrl">
-        <button class="qty-btn" onclick="adjQty(this,-1)">−</button>
-        <input class="qty-inp" type="number" min="0" value="${qty}">
-        <button class="qty-btn" onclick="adjQty(this,1)">+</button>
-      </div></td>
-      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
-    tb.appendChild(tr);
+  const el=document.getElementById('inv-body'); el.innerHTML='';
+  const rows = S.inventory&&S.inventory.length ? S.inventory : null;
+  if(!rows){
+    el.innerHTML='<div style="text-align:center;padding:16px;font-style:italic;color:var(--text3);font-size:12px">No items yet — tap ＋ to add one</div>';
+    return;
+  }
+  rows.forEach((r,i)=>{
+    const name = r[0]||'Unnamed item';
+    const sub  = [r[1],r[2]].filter(Boolean).join(' · ');
+    const qty  = r[3]!==undefined ? r[3] : 1;
+    const div  = document.createElement('div');
+    div.className='inv-item';
+    div.onclick = ()=>openItemPopup(i);
+    div.innerHTML=`
+      <div class="inv-item-main">
+        <div class="inv-item-name">${esc(name)}</div>
+        ${sub?`<div class="inv-item-sub">${esc(sub)}</div>`:''}
+      </div>
+      <div class="inv-item-qty">×${qty}</div>
+      <div class="inv-item-arrow">›</div>`;
+    el.appendChild(div);
   });
 }
+
+function openItemPopup(idx){
+  _itIdx = idx;
+  const r = S.inventory[idx]||['','','',1];
+  document.getElementById('itpop-name').value    = r[0]||'';
+  document.getElementById('itpop-desc').value    = r[1]||'';
+  document.getElementById('itpop-comment').value = r[2]||'';
+  document.getElementById('itpop-qty').textContent = r[3]!==undefined?r[3]:1;
+  document.getElementById('itpop-title').textContent = r[0]||'New Item';
+  document.getElementById('itpop').classList.add('open');
+  document.getElementById('itpop-overlay').classList.add('open');
+  // Focus name if empty
+  setTimeout(()=>{
+    const n=document.getElementById('itpop-name');
+    if(!n.value) n.focus();
+  },80);
+}
+
+function closeItemPopup(){
+  if(_itIdx===null){ _closeItpop(); return; }
+  // Write current popup values back to state
+  const name    = document.getElementById('itpop-name').value.trim();
+  const desc    = document.getElementById('itpop-desc').value.trim();
+  const comment = document.getElementById('itpop-comment').value.trim();
+  const qty     = parseInt(document.getElementById('itpop-qty').textContent)||1;
+  if(!name && !desc && !comment && qty===1){
+    // Empty item — remove it
+    S.inventory.splice(_itIdx,1);
+  } else {
+    S.inventory[_itIdx] = [name, desc, comment, qty];
+  }
+  save();
+  renderInventory();
+  _closeItpop();
+}
+
+function deleteCurrentItem(){
+  if(_itIdx!==null) S.inventory.splice(_itIdx,1);
+  save(); renderInventory(); _closeItpop();
+}
+
+function _closeItpop(){
+  document.getElementById('itpop').classList.remove('open');
+  document.getElementById('itpop-overlay').classList.remove('open');
+  _itIdx=null;
+}
+
+function itpopAdjQty(delta){
+  const el=document.getElementById('itpop-qty');
+  el.textContent=Math.max(0,(parseInt(el.textContent)||0)+delta);
+  // Update title live
+  const name=document.getElementById('itpop-name').value||'New Item';
+  document.getElementById('itpop-title').textContent=name;
+}
+
+function delRow(b){ /* legacy — items deleted via popup */ }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
 // ══════════════════════════════════════════
@@ -1863,7 +2006,6 @@ function renderSupplies(){
     const valEl=document.getElementById('s-'+k);
     if(valEl) valEl.textContent=S.supplies[k];
     const mx=S.supplyMax[k]||0;
-    // sync the max input field value (without firing oninput)
     const maxInp=document.getElementById('e-'+k+'-max');
     if(maxInp && document.activeElement!==maxInp) maxInp.value=mx||'';
     const bar=document.getElementById('sb-'+k);
@@ -1873,6 +2015,37 @@ function renderSupplies(){
       bar.style.background=p>50?colors[k]:p>25?'var(--gold2)':'var(--red2)';
     } else if(bar){ bar.style.width='0%'; }
   });
+
+  // Crew warning indicator
+  const crewRow   = document.getElementById('crew-store-row');
+  const crewBadge = document.getElementById('crew-warn-badge');
+  const crewVal   = document.getElementById('s-crew');
+  const cur = S.supplies.crew;
+  const max = S.supplyMax.crew||0;
+  if(crewRow && crewBadge){
+    crewRow.classList.remove('crew-warn','crew-crit');
+    crewBadge.style.display='none';
+    if(max > 0){
+      const ratio = cur / max;
+      if(cur === 0){
+        crewRow.classList.add('crew-crit');
+        crewBadge.style.display='inline';
+        crewBadge.textContent='☠ NO CREW';
+        if(crewVal) crewVal.style.color='var(--red2)';
+      } else if(ratio < 0.5){
+        crewRow.classList.add('crew-warn');
+        const short = max - cur;
+        crewBadge.style.display='inline';
+        crewBadge.textContent=`⚠ −${short}`;
+        if(crewVal) crewVal.style.color='var(--gold2)';
+      } else {
+        if(crewVal) crewVal.style.color='var(--text)';
+      }
+    } else {
+      if(crewVal) crewVal.style.color='var(--text)';
+    }
+  }
+
   renderGrubCalc();
 }
 function getCookRank(){ const c=CREW.find(x=>x.id==='cook'); return c?(c.levelRanks[S.crew['cook']||'none']||0):0; }
