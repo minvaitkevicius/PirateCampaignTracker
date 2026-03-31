@@ -60,9 +60,10 @@ window._pushToFirebase = async function(state){
     // Strip shipImg — stored locally only
     delete toSync.shipImg;
     // Firestore cannot store arrays-of-arrays — convert to arrays of objects
-    toSync.inventory = (state.inventory||[]).map(r=>({n:r[0]||'',d:r[1]||'',c:r[2]||''}));
+    toSync.inventory = (state.inventory||[]).map(r=>({n:r[0]||'',d:r[1]||'',c:r[2]||'',q:r[3]||1}));
     toSync.upgrades  = (state.upgrades||[]).map(r=>({n:r[0]||'',p:r[1]||'',e:r[2]||'',c:r[3]||''}));
     await setDoc(window._docRef, toSync, {merge:true});
+    setSyncStatus('🟢 Synced','green2');
   } catch(e) {
     setSyncStatus('⚠️ Sync error','gold2');
   }
@@ -137,7 +138,13 @@ body{
   color:var(--gold2);letter-spacing:2px;flex:1;text-align:center;
   text-shadow:0 0 18px rgba(201,148,26,.45);
 }
-#sync-badge{font-family:'Lora',serif;font-size:10px;color:var(--text3);white-space:nowrap;min-width:70px;text-align:right;}
+#sync-badge{
+  font-family:'Lora',serif;font-size:10px;color:var(--text3);
+  white-space:nowrap;min-width:70px;text-align:right;
+  display:flex;flex-direction:column;align-items:flex-end;gap:1px;
+}
+#sync-dot{font-size:11px;line-height:1;}
+#sync-age{font-size:9px;color:var(--text3);line-height:1;}
 .party-tag{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--text3);min-width:70px;}
 .tabs{display:flex;gap:2px;}
 .tab-btn{
@@ -273,7 +280,25 @@ body{
 .ship-name-tap:hover{border-bottom-color:var(--gold);}
 
 /* ── CREW BOON ── */
+.qty-ctrl{display:flex;align-items:center;gap:2px;}
+.qty-btn{
+  background:var(--bg3);border:1px solid var(--border);border-radius:2px;
+  color:var(--text2);font-size:13px;width:20px;height:22px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;line-height:1;padding:0;
+}
+.qty-btn:active{transform:scale(.85);}
+.qty-inp{
+  background:transparent;border:none;border-bottom:1px solid var(--border);
+  color:var(--text);font-family:'Cinzel',serif;font-size:12px;
+  width:28px;text-align:center;padding:1px 0;
+}
+.qty-inp:focus{outline:none;border-bottom-color:var(--gold);}
 .crew-card{margin-bottom:8px;}
+.crew-card-body{overflow:hidden;max-height:0;transition:max-height .28s ease;}
+.crew-card.expanded .crew-card-body{max-height:220px;}
+.crew-chevron{font-size:10px;color:var(--text3);transition:transform .2s;flex-shrink:0;padding-left:4px;}
+.crew-card.expanded .crew-chevron{transform:rotate(180deg);}
 .crew-boon-row{
   display:flex;align-items:center;gap:6px;
   background:rgba(0,0,0,.2);border:1px solid var(--border);
@@ -392,7 +417,13 @@ body{
 
 /* ── CREW ── */
 .crew-list{display:flex;flex-direction:column;gap:7px;}
-.crew-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:9px 11px;display:flex;align-items:center;gap:8px;}
+.crew-row{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);  /* collapsed: full radius */
+  padding:9px 11px;display:flex;align-items:center;gap:8px;
+  cursor:pointer;user-select:none;transition:border-radius .01s;
+}
+.crew-card.expanded .crew-row{border-radius:var(--radius) var(--radius) 0 0;}
 .crew-card:last-child .crew-boon-row{margin-bottom:0;}
 .crew-icon{font-size:16px;flex-shrink:0;}
 .crew-info{flex:1;}
@@ -470,8 +501,14 @@ body{
 .popup-close{
   background:transparent;border:1px solid var(--border2);border-radius:4px;
   color:var(--text2);font-family:'Cinzel',serif;font-size:10px;
-  letter-spacing:1px;padding:8px;width:100%;cursor:pointer;text-transform:uppercase;
+  letter-spacing:1px;padding:8px;flex:1;cursor:pointer;text-transform:uppercase;
 }
+.wpop-btn-row{display:flex;gap:8px;}
+.wpop-clear{border-color:var(--red);color:var(--red2);flex:0 0 auto;padding:8px 14px;}
+.wpop-context{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.wpop-mini-hull{flex-shrink:0;width:48px;height:72px;}
+.wpop-labels{flex:1;}
+.wpop-subtitle{font-size:11px;color:var(--text3);font-style:italic;font-family:'Lora',serif;margin-top:2px;}
 .popup-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;
 }
@@ -564,7 +601,10 @@ body{
   <div class="hdr-row">
     <div class="party-tag" id="party-tag"></div>
     <h1>⚓ Party Tracker</h1>
-    <div id="sync-badge">⏳</div>
+    <div id="sync-badge">
+    <span id="sync-dot">⏳</span>
+    <span id="sync-age"></span>
+  </div>
   </div>
   <div class="tabs">
     <button class="tab-btn active" onclick="showTab('gold',this)">📦 Inventory</button>
@@ -628,8 +668,11 @@ body{
     <div class="inv-wrap">
       <table class="inv-tbl">
         <thead><tr>
-          <th style="width:27%">Name</th><th style="width:35%">Description</th>
-          <th style="width:30%">Comment</th><th style="width:8%"></th>
+          <th style="width:22%">Name</th>
+          <th style="width:30%">Description</th>
+          <th style="width:24%">Comment</th>
+          <th style="width:12%">Qty</th>
+          <th style="width:8%"></th>
         </tr></thead>
         <tbody id="inv-body"></tbody>
       </table>
@@ -841,10 +884,20 @@ body{
 <!-- weapon popup -->
 <div class="popup-overlay" id="wpop-overlay" onclick="closeWeaponPopup()"></div>
 <div class="weapon-popup" id="wpop">
-  <div class="popup-title" id="wpop-title">Select Weapon</div>
+  <!-- Mini context diagram + title -->
+  <div class="wpop-context">
+    <div class="wpop-mini-hull" id="wpop-mini-hull"></div>
+    <div class="wpop-labels">
+      <div class="popup-title" id="wpop-title">Select Weapon</div>
+      <div class="wpop-subtitle" id="wpop-subtitle"></div>
+    </div>
+  </div>
   <select class="popup-sel" id="wpop-sel" onchange="onPopupWeaponChange()"></select>
   <div class="popup-info" id="wpop-info">—</div>
-  <button class="popup-close" onclick="closeWeaponPopup()">✓ Done</button>
+  <div class="wpop-btn-row">
+    <button class="popup-close wpop-clear" onclick="clearWeaponSlot()">✕ Clear</button>
+    <button class="popup-close" onclick="closeWeaponPopup()">✓ Done</button>
+  </div>
 </div>
 
 <!-- ═══ CROP MODAL ═══ -->
@@ -877,9 +930,29 @@ body{
 //  SYNC STATUS — registered early so Firebase module can call it anytime
 // ══════════════════════════════════════════
 window._setSyncStatus = function(msg, v){
-  const el = document.getElementById('sync-badge');
-  if(el){ el.textContent=msg; el.style.color=`var(--${v})`; }
+  const dot = document.getElementById('sync-dot');
+  const age = document.getElementById('sync-age');
+  if(dot){ dot.textContent=msg; dot.style.color=`var(--${v})`; }
+  if(age){ age.textContent=''; }
+  if(msg.includes('Synced')){ window._lastSyncTime = Date.now(); }
 };
+// Tick sync age every 5s
+window._lastSyncTime = null;
+setInterval(()=>{
+  if(!window._lastSyncTime) return;
+  const age = document.getElementById('sync-age');
+  if(!age) return;
+  const s = Math.floor((Date.now()-window._lastSyncTime)/1000);
+  if(s<10){ age.textContent='just now'; age.style.color='var(--green2)'; }
+  else if(s<60){ age.textContent=s+'s ago'; age.style.color='var(--text3)'; }
+  else if(s<300){ age.textContent=Math.floor(s/60)+'m ago'; age.style.color='var(--gold2)'; }
+  else { age.textContent=Math.floor(s/60)+'m ago'; age.style.color='var(--red2)'; }
+  // Turn dot amber if >30s since last sync and we expected to be synced
+  const dot=document.getElementById('sync-dot');
+  if(dot && dot.textContent.includes('🟢') && s>30){
+    dot.textContent='🟡'; dot.style.color='var(--gold2)';
+  }
+},5000);
 
 // ══════════════════════════════════════════
 //  STATE
@@ -936,7 +1009,7 @@ async function boot(){
     // Deserialize Firestore objects back to arrays-of-arrays
     const r = Object.assign({}, remote);
     if(r.inventory && r.inventory.length && typeof r.inventory[0]==='object' && !Array.isArray(r.inventory[0])){
-      r.inventory = r.inventory.map(o=>[o.n||'', o.d||'', o.c||'']);
+      r.inventory = r.inventory.map(o=>[o.n||'', o.d||'', o.c||'', o.q||1]);
     }
     if(r.upgrades && r.upgrades.length && typeof r.upgrades[0]==='object' && !Array.isArray(r.upgrades[0])){
       r.upgrades = r.upgrades.map(o=>[o.n||'', o.p||'', o.e||'', o.c||'']);
@@ -1147,16 +1220,31 @@ function addRow(){
   tr.innerHTML=`<td><input type="text" placeholder="Item…"></td>
     <td><input type="text" placeholder="What is it…"></td>
     <td><input type="text" placeholder="Notes…"></td>
+    <td><div class="qty-ctrl">
+      <button class="qty-btn" onclick="adjQty(this,-1)">−</button>
+      <input class="qty-inp" type="number" min="0" value="1">
+      <button class="qty-btn" onclick="adjQty(this,1)">+</button>
+    </div></td>
     <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
   document.getElementById('inv-body').appendChild(tr);
+}
+function adjQty(btn, delta){
+  const inp = btn.closest('.qty-ctrl').querySelector('.qty-inp');
+  const cur = parseInt(inp.value)||0;
+  inp.value = Math.max(0, cur+delta);
+  collectInv(); save();
 }
 function delRow(b){ b.closest('tr').remove(); collectInv(); save(); }
 // collectInv: read DOM → S.inventory (no push)
 function collectInv(){
   S.inventory=[];
   document.querySelectorAll('#inv-body tr').forEach(tr=>{
-    const i=tr.querySelectorAll('input');
-    if(i.length>=3) S.inventory.push([i[0].value,i[1].value,i[2].value]);
+    const inputs=tr.querySelectorAll('input');
+    if(inputs.length>=3){
+      // inputs: name, desc, comment, qty
+      const qty = inputs[3] ? (parseInt(inputs[3].value)||1) : 1;
+      S.inventory.push([inputs[0].value, inputs[1].value, inputs[2].value, qty]);
+    }
   });
 }
 function saveInv(){ collectInv(); save(); }
@@ -1165,9 +1253,15 @@ function renderInventory(){
   const rows=S.inventory&&S.inventory.length?S.inventory:[['','','']];
   rows.forEach(r=>{
     const tr=document.createElement('tr');
+    const qty = r[3]!==undefined ? r[3] : 1;
     tr.innerHTML=`<td><input type="text" value="${esc(r[0])}" placeholder="Item…"></td>
       <td><input type="text" value="${esc(r[1])}" placeholder="What is it…"></td>
       <td><input type="text" value="${esc(r[2])}" placeholder="Notes…"></td>
+      <td><div class="qty-ctrl">
+        <button class="qty-btn" onclick="adjQty(this,-1)">−</button>
+        <input class="qty-inp" type="number" min="0" value="${qty}">
+        <button class="qty-btn" onclick="adjQty(this,1)">+</button>
+      </div></td>
       <td><button class="del-btn" onclick="delRow(this)">✕</button></td>`;
     tb.appendChild(tr);
   });
@@ -1545,6 +1639,43 @@ function openWeaponPopup(side, idx){
   _popSide = side; _popIdx = idx;
   const sideLabel = side==='port' ? '◀ Port' : 'Starboard ▶';
   document.getElementById('wpop-title').textContent = `${sideLabel} — Slot ${idx+1}`;
+
+  // Subtitle: position description
+  const numSlots = S.ship.weaponSlots||6;
+  const pos = idx===0?'Bow-side':idx===numSlots-1?'Stern-side':idx<numSlots/2?'Forward':'Aft';
+  document.getElementById('wpop-subtitle').textContent = `${pos} · ${S.ship.name||'Vessel'}`;
+
+  // Mini hull diagram
+  const miniEl = document.getElementById('wpop-mini-hull');
+  const ns = numSlots;
+  const slotH = Math.floor(64/ns);
+  let miniSvg = `<svg viewBox="0 0 48 72" xmlns="http://www.w3.org/2000/svg" width="48" height="72">
+    <path d="M24,4 C20,4 10,12 9,22 L9,56 C9,64 16,68 24,68 C32,68 39,64 39,56 L39,22 C38,12 28,4 24,4Z"
+      fill="#1a1208" stroke="#5c4228" stroke-width="1.5"/>
+    <line x1="24" y1="10" x2="24" y2="62" stroke="#3e2e1a" stroke-width="1.5"/>`;
+  for(let i=0;i<ns;i++){
+    const y = 12 + i*slotH + slotH/2;
+    const isThis = i===idx;
+    // Port side (left)
+    if(side==='port'){
+      miniSvg += `<rect x="2" y="${y-slotH/2+1}" width="7" height="${slotH-2}" rx="1"
+        fill="${isThis?'#c49a1a':'#2a1e08'}" stroke="${isThis?'#f2d070':'#3e2e1a'}" stroke-width="${isThis?1.5:0.8}"/>`;
+    } else {
+      miniSvg += `<rect x="2" y="${y-slotH/2+1}" width="7" height="${slotH-2}" rx="1"
+        fill="#1a1208" stroke="#3e2e1a" stroke-width="0.5" opacity="0.4"/>`;
+    }
+    // Starboard side (right)
+    if(side==='starboard'){
+      miniSvg += `<rect x="39" y="${y-slotH/2+1}" width="7" height="${slotH-2}" rx="1"
+        fill="${isThis?'#c49a1a':'#2a1e08'}" stroke="${isThis?'#f2d070':'#3e2e1a'}" stroke-width="${isThis?1.5:0.8}"/>`;
+    } else {
+      miniSvg += `<rect x="39" y="${y-slotH/2+1}" width="7" height="${slotH-2}" rx="1"
+        fill="#1a1208" stroke="#3e2e1a" stroke-width="0.5" opacity="0.4"/>`;
+    }
+  }
+  miniSvg += '</svg>';
+  miniEl.innerHTML = miniSvg;
+
   const sel = document.getElementById('wpop-sel');
   sel.innerHTML='';
   WEAPONS.forEach(w=>{
@@ -1557,6 +1688,14 @@ function openWeaponPopup(side, idx){
   document.getElementById('wpop-info').textContent = cur?.note||'— Empty slot';
   document.getElementById('wpop').classList.add('open');
   document.getElementById('wpop-overlay').classList.add('open');
+}
+
+function clearWeaponSlot(){
+  if(_popSide!==null && _popIdx!==null){
+    S.weapons[_popSide][_popIdx]='';
+    save(); renderWeapons();
+  }
+  closeWeaponPopup();
 }
 
 function onPopupWeaponChange(){
@@ -1604,67 +1743,83 @@ function adjMote(id,d){ S.motes[id]=Math.max(0,(S.motes[id]||0)+d); document.get
 // ══════════════════════════════════════════
 function renderCrew(){
   const list=document.getElementById('crew-list'); list.innerHTML='';
-  CREW.forEach(c=>{
-    const wrapper=document.createElement('div'); wrapper.className='crew-card'; wrapper.dataset.crewId=c.id;
+  // Remember which cards were expanded
+  const wasExpanded={};
+  document.querySelectorAll('.crew-card').forEach(el=>{
+    if(el.classList.contains('expanded')) wasExpanded[el.dataset.crewId]=true;
+  });
 
-    // ── Top row: icon, role/ability, level select ──
+  CREW.forEach(c=>{
+    const wrapper=document.createElement('div');
+    wrapper.className='crew-card'+(wasExpanded[c.id]?' expanded':'');
+    wrapper.dataset.crewId=c.id;
+
+    // ── Top row (always visible): icon, role, level, chevron ──
+    const nameVal  = S.crewNames?.[c.id]||'';
+    const hasSheet = !!(S.crewSheets?.[c.id]);
     const topRow=document.createElement('div'); topRow.className='crew-row';
+    topRow.onclick = e => {
+      // Don't toggle if clicking the select
+      if(e.target.tagName==='SELECT'||e.target.tagName==='OPTION') return;
+      wrapper.classList.toggle('expanded');
+    };
     const sel=document.createElement('select'); sel.className='crew-sel';
+    sel.onclick=e=>e.stopPropagation();
     c.levels.forEach(l=>{
       const o=document.createElement('option'); o.value=l; o.textContent=l;
       if(S.crew[c.id]===l) o.selected=true; sel.appendChild(o);
     });
     sel.onchange=()=>{ S.crew[c.id]=sel.value; renderGrubCalc(); save(); };
-    topRow.innerHTML=`<div class="crew-icon">${c.icon}</div>
-      <div class="crew-info">
-        <div class="crew-role">${c.name}</div>
-        <div class="crew-ability">${c.ability}</div>
-      </div>`;
-    topRow.appendChild(sel);
 
-    // ── Name row ──
+    topRow.innerHTML=`
+      <div class="crew-icon">${c.icon}</div>
+      <div class="crew-info">
+        <div class="crew-role">${c.name}${nameVal?` <span style="color:var(--text3);font-weight:400;font-size:10px">· ${esc(nameVal)}</span>`:''}</div>
+        <div class="crew-ability">${c.ability}</div>
+      </div>
+      <span class="crew-chevron">▼</span>`;
+    // Insert select before chevron
+    const chevron = topRow.querySelector('.crew-chevron');
+    topRow.insertBefore(sel, chevron);
+
+    // ── Collapsible body ──
+    const body=document.createElement('div'); body.className='crew-card-body';
+
     const nameRow=document.createElement('div'); nameRow.className='crew-name-row';
-    const nameVal=S.crewNames?.[c.id]||'';
     nameRow.innerHTML=`<span class="boon-lbl">👤</span>
       <input class="crew-name-inp" type="text" placeholder="Character name…"
         value="${esc(nameVal)}">`;
 
-    // ── Boon row ──
     const boonRow=document.createElement('div'); boonRow.className='crew-boon-row';
     const boonVal=S.crewBoons?.[c.id]||'';
     boonRow.innerHTML=`<span class="boon-lbl">✦</span>
       <input class="boon-inp" type="text" placeholder="Boon / special ability…"
         value="${esc(boonVal)}">`;
 
-    // ── Sheet link row ──
     const sheetRow=document.createElement('div'); sheetRow.className='crew-sheet-row';
     const sheetVal=S.crewSheets?.[c.id]||'';
-    const hasLink=!!sheetVal;
     sheetRow.innerHTML=`<span class="boon-lbl">📄</span>
       <input class="sheet-inp" type="url" placeholder="Paste Google Drive / image link…"
         value="${esc(sheetVal)}">
-      <a class="sheet-open-btn ${hasLink?'has-link':''}"
-        href="${hasLink?sheetVal:'#'}"
-        target="_blank" rel="noopener"
-        onclick="return handleSheetOpen(event, this)"
-        title="${hasLink?'Open stat block':'No link set'}">
-        ${hasLink?'↗ Open':'↗'}
-      </a>`;
+      <a class="sheet-open-btn ${sheetVal?'has-link':''}"
+        href="${sheetVal||'#'}" target="_blank" rel="noopener"
+        onclick="return handleSheetOpen(event, this)">${sheetVal?'↗ Open':'↗'}</a>`;
 
-    // Wire up the open-button to stay current as user types
-    const sheetInp = sheetRow.querySelector('.sheet-inp');
-    const sheetBtn = sheetRow.querySelector('.sheet-open-btn');
+    const sheetInp=sheetRow.querySelector('.sheet-inp');
+    const sheetBtn=sheetRow.querySelector('.sheet-open-btn');
     sheetInp.addEventListener('input', ()=>{
       const v=sheetInp.value.trim();
-      sheetBtn.href = v||'#';
-      sheetBtn.className = 'sheet-open-btn'+(v?' has-link':'');
-      sheetBtn.textContent = v?'↗ Open':'↗';
+      sheetBtn.href=v||'#';
+      sheetBtn.className='sheet-open-btn'+(v?' has-link':'');
+      sheetBtn.textContent=v?'↗ Open':'↗';
     });
 
+    body.appendChild(nameRow);
+    body.appendChild(boonRow);
+    body.appendChild(sheetRow);
+
     wrapper.appendChild(topRow);
-    wrapper.appendChild(nameRow);
-    wrapper.appendChild(boonRow);
-    wrapper.appendChild(sheetRow);
+    wrapper.appendChild(body);
     list.appendChild(wrapper);
   });
 }
