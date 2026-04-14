@@ -910,21 +910,8 @@ body{
 
   <!-- Ship Upgrades -->
   <div class="sec">
-    <div class="sec-title">
-      <span>⚙ Upgrades &amp; Modifications</span>
-    </div>
-    <div class="inv-wrap">
-      <table class="inv-tbl" id="upgrades-tbl">
-        <thead><tr>
-          <th style="width:22%">Name</th>
-          <th style="width:20%">Part</th>
-          <th style="width:30%">Effect</th>
-          <th style="width:20%">Comment</th>
-          <th style="width:8%"></th>
-        </tr></thead>
-        <tbody id="upgrades-body"></tbody>
-      </table>
-    </div>
+    <div class="sec-title"><span>⚙ Upgrades &amp; Modifications</span></div>
+    <div class="inv-list" id="upgrades-body"></div>
     <button class="add-row-btn" onclick="addUpgrade()">＋ ADD UPGRADE</button>
   </div>
 </div>
@@ -955,6 +942,34 @@ body{
   <div class="wpop-btn-row">
     <button class="popup-close wpop-clear" onclick="clearWeaponSlot()">✕ Clear</button>
     <button class="popup-close" onclick="closeWeaponPopup()">✓ Done</button>
+  </div>
+</div>
+
+<!-- upgrade popup -->
+<div class="popup-overlay" id="upop-overlay" onclick="closeUpgradePopup()"></div>
+<div class="weapon-popup" id="upop">
+  <div class="itpop-header">
+    <div class="popup-title" id="upop-title">Edit Upgrade</div>
+    <button class="itpop-del" onclick="deleteCurrentUpgrade()" title="Delete upgrade">🗑</button>
+  </div>
+  <div class="itpop-field">
+    <label class="itpop-lbl">NAME</label>
+    <input class="itpop-inp" id="upop-name" type="text" placeholder="Upgrade name…">
+  </div>
+  <div class="itpop-field">
+    <label class="itpop-lbl">PART</label>
+    <input class="itpop-inp" id="upop-part" type="text" placeholder="Hull / Sails / Nav / Weapons…">
+  </div>
+  <div class="itpop-field">
+    <label class="itpop-lbl">EFFECT</label>
+    <textarea class="itpop-inp itpop-ta" id="upop-effect" placeholder="What it does, bonuses granted…" rows="2"></textarea>
+  </div>
+  <div class="itpop-field">
+    <label class="itpop-lbl">COMMENT</label>
+    <input class="itpop-inp" id="upop-comment" type="text" placeholder="Cost, source, conditions…">
+  </div>
+  <div class="wpop-btn-row" style="margin-top:10px">
+    <button class="popup-close" onclick="closeUpgradePopup()">✓ Done</button>
   </div>
 </div>
 
@@ -2121,40 +2136,94 @@ function enterShipEditIfNot(){
 // ══════════════════════════════════════════
 //  UPGRADES TABLE
 // ══════════════════════════════════════════
+// ── Upgrade index for popup ──
+let _upIdx = null;
+
 function addUpgrade(){
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="text" placeholder="Upgrade name…"></td>
-    <td><input type="text" placeholder="Sail/Hull/Nav…"></td>
-    <td><input type="text" placeholder="What it does…"></td>
-    <td><input type="text" placeholder="Notes…"></td>
-    <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
-  document.getElementById('upgrades-body').appendChild(tr);
+  S.upgrades.push(['','','','']);
+  _upIdx = S.upgrades.length - 1;
+  renderUpgrades();
+  openUpgradePopup(_upIdx);
+  save();
 }
-function delUpgrade(btn){ btn.closest('tr').remove(); collectUpgrades(); save(); }
-function collectUpgrades(){
-  S.upgrades = [];
-  document.querySelectorAll('#upgrades-body tr').forEach(tr=>{
-    const i = tr.querySelectorAll('input');
-    if(i.length>=3) S.upgrades.push([i[0].value, i[1].value, i[2].value, i[3]?i[3].value:'']);
-  });
-}
-function saveUpgrades(){ collectUpgrades(); save(); }
+
+function collectUpgrades(){ /* state kept in sync via popup */ }
+function saveUpgrades(){ save(); }
+
 function renderUpgrades(){
-  const tbody = document.getElementById('upgrades-body');
-  if(!tbody) return;
-  tbody.innerHTML = '';
-  const rows = S.upgrades && S.upgrades.length ? S.upgrades : [];
-  rows.forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input type="text" value="${esc(r[0])}" placeholder="Upgrade name…"></td>
-      <td><input type="text" value="${esc(r[1]||'')}" placeholder="Sail/Hull/Nav…"></td>
-      <td><input type="text" value="${esc(r[2])}" placeholder="What it does…"></td>
-      <td><input type="text" value="${esc(r[3]||'')}" placeholder="Notes…"></td>
-      <td><button class="del-btn" onclick="delUpgrade(this)">✕</button></td>`;
-    tbody.appendChild(tr);
+  const el = document.getElementById('upgrades-body');
+  if(!el) return;
+  el.innerHTML = '';
+  if(!S.upgrades || !S.upgrades.length){
+    el.innerHTML='<div style="text-align:center;padding:14px;font-style:italic;color:var(--text3);font-size:12px">No upgrades yet — tap ＋ to add one</div>';
+    return;
+  }
+  S.upgrades.forEach((r, i) => {
+    const name   = r[0]||'Unnamed upgrade';
+    const part   = r[1]||'';
+    const effect = r[2]||'';
+    const sub    = [part, effect].filter(Boolean).join(' · ');
+    const div = document.createElement('div');
+    div.className = 'inv-item';
+    div.onclick = () => openUpgradePopup(i);
+    div.innerHTML = `
+      <div class="inv-item-main">
+        <div class="inv-item-name">${esc(name)}</div>
+        ${sub ? `<div class="inv-item-sub">${esc(sub)}</div>` : ''}
+      </div>
+      <div class="inv-item-arrow">›</div>`;
+    el.appendChild(div);
   });
+}
+
+function openUpgradePopup(idx){
+  _upIdx = idx;
+  const r = S.upgrades[idx] || ['','','',''];
+  document.getElementById('upop-name').value    = r[0]||'';
+  document.getElementById('upop-part').value    = r[1]||'';
+  document.getElementById('upop-effect').value  = r[2]||'';
+  document.getElementById('upop-comment').value = r[3]||'';
+  document.getElementById('upop-title').textContent = r[0]||'New Upgrade';
+  document.getElementById('upop').classList.add('open');
+  document.getElementById('upop-overlay').classList.add('open');
+  setTimeout(()=>{
+    const n = document.getElementById('upop-name');
+    if(!n.value) n.focus();
+  }, 80);
+}
+
+// Live title update as name is typed
+document.addEventListener('input', e => {
+  if(e.target.id === 'upop-name'){
+    document.getElementById('upop-title').textContent = e.target.value || 'New Upgrade';
+  }
+});
+
+function closeUpgradePopup(){
+  if(_upIdx === null){ _closeUpop(); return; }
+  const name    = document.getElementById('upop-name').value.trim();
+  const part    = document.getElementById('upop-part').value.trim();
+  const effect  = document.getElementById('upop-effect').value.trim();
+  const comment = document.getElementById('upop-comment').value.trim();
+  if(!name && !part && !effect && !comment){
+    S.upgrades.splice(_upIdx, 1); // remove empty
+  } else {
+    S.upgrades[_upIdx] = [name, part, effect, comment];
+  }
+  save();
+  renderUpgrades();
+  _closeUpop();
+}
+
+function deleteCurrentUpgrade(){
+  if(_upIdx !== null) S.upgrades.splice(_upIdx, 1);
+  save(); renderUpgrades(); _closeUpop();
+}
+
+function _closeUpop(){
+  document.getElementById('upop').classList.remove('open');
+  document.getElementById('upop-overlay').classList.remove('open');
+  _upIdx = null;
 }
 
 boot();
